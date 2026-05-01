@@ -3,19 +3,27 @@ const sampleCsv = `MODEL,ROTOR,FLOW_GPM,HEAD_FT,EFFICIENCY_PCT,POWER_HP\nHD5000,
 let curveRows = [];
 let lastRecommendation = null;
 
+const colors = ['#2563eb','#16a34a','#dc2626','#9333ea','#ea580c','#0891b2','#4f46e5','#d97706','#0f766e'];
 const els = {
   curveFile: document.getElementById('curveFile'),
   libraryStats: document.getElementById('libraryStats'),
   curveTableWrap: document.getElementById('curveTableWrap'),
   summaryCards: document.getElementById('summaryCards'),
   recommendationBox: document.getElementById('recommendationBox'),
+  comparisonWrap: document.getElementById('comparisonWrap'),
   curveChart: document.getElementById('curveChart'),
+  chartLegend: document.getElementById('chartLegend'),
   loadSampleBtn: document.getElementById('loadSampleBtn'),
   calcTdhBtn: document.getElementById('calcTdhBtn'),
+  exportJsonBtn: document.getElementById('exportJsonBtn'),
+  exportCsvBtn: document.getElementById('exportCsvBtn'),
+  exportHtmlBtn: document.getElementById('exportHtmlBtn'),
+  printBtn: document.getElementById('printBtn'),
   appForm: document.getElementById('appForm'),
+  familyFilter: document.getElementById('familyFilter'),
 };
 
-function parseCsv(text) {
+function parseCsv(text, sourceName='uploaded') {
   const lines = text.trim().split(/\r?\n/).filter(Boolean);
   const headers = lines.shift().split(',').map(h => h.trim());
   return lines.map(line => {
@@ -29,6 +37,7 @@ function parseCsv(text) {
       headFt: Number(String(obj.HEAD_FT || obj['HEAD (FT)'] || '0').replace(/[^0-9.\-]/g, '')),
       efficiencyPct: Number(String(obj.EFFICIENCY_PCT || obj['EFFICIENCY (%)'] || '0').replace(/[^0-9.\-]/g, '')),
       powerHp: Number(String(obj.POWER_HP || obj['POWER (HP)'] || '0').replace(/[^0-9.\-]/g, '')),
+      source: sourceName,
     };
   }).filter(r => r.model && Number.isFinite(r.flowGpm) && Number.isFinite(r.headFt));
 }
@@ -38,9 +47,10 @@ function toGpm(value, unit) {
   if (unit === 'lps') return value * 15.8503;
   return value;
 }
-function fromGpm(value, unit) {
-  if (unit === 'm3h') return value / 4.40287;
-  if (unit === 'lps') return value / 15.8503;
+function fromFeetHead(value, unit, sg=1) {
+  if (unit === 'm') return value / 3.28084;
+  if (unit === 'psi') return value * sg / 2.31;
+  if (unit === 'bar') return value / 33.455;
   return value;
 }
 function toFeetHead(value, unit, sg=1) {
@@ -49,11 +59,21 @@ function toFeetHead(value, unit, sg=1) {
   if (unit === 'bar') return value * 33.455 / sg;
   return value;
 }
-function fromFeetHead(value, unit, sg=1) {
-  if (unit === 'm') return value / 3.28084;
-  if (unit === 'psi') return value * sg / 2.31;
-  if (unit === 'bar') return value / 33.455;
-  return value;
+function downloadFile(name, content, type) {
+  const blob = new Blob([content], { type });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = name; a.click();
+  URL.revokeObjectURL(url);
+}
+function uniqueModels(rows) { return [...new Set(rows.map(r => r.model))].sort(); }
+function activeRows() {
+  const filter = els.familyFilter.value;
+  return filter === 'all' ? curveRows : curveRows.filter(r => r.model === filter);
+}
+function updateFamilyFilter() {
+  const models = uniqueModels(curveRows);
+  els.familyFilter.innerHTML = `<option value="all">All loaded models</option>${models.map(m => `<option value="${m}">${m}</option>`).join('')}`;
 }
 
 function calcTdh() {
@@ -76,12 +96,7 @@ function calcTdh() {
   return tdhFt;
 }
 
-function recommend(e) {
-  if (e) e.preventDefault();
-  if (!curveRows.length) {
-    alert('Load or upload pump curve data first.');
-    return;
-  }
+function buildContext() {
   const flowInput = Number(document.getElementById('flowRate').value || 0);
   const flowUnit = document.getElementById('flowUnit').value;
   const headInput = Number(document.getElementById('headValue').value || 0);
@@ -90,22 +105,36 @@ function recommend(e) {
   const viscosity = Number(document.getElementById('viscosity').value || 1);
   const pumpType = document.getElementById('pumpType').value;
   const serviceFactor = Number(document.getElementById('motorServiceFactor').value || 1.15);
-
+  const solidsSize = Number(document.getElementById('solidsSize').value || 0);
+  const fluidTemp = Number(document.getElementById('fluidTemp').value || 70);
+  const materialPreference = document.getElementById('materialPreference').value;
   const targetFlowGpm = toGpm(flowInput, flowUnit);
   const targetHeadFt = toFeetHead(headInput, headUnit, sg);
-  const fluidPenalty = 1 + Math.max(0, sg - 1) * 0.08 + Math.max(0, viscosity - 1) * 0.0015;
+  const fluidPenalty = 1 + Math.max(0, sg - 1) * 0.08 + Math.max(0, viscosity - 1) * 0.0015 + Math.max(0, solidsSize - 0.5) * 0.01;
   const adjustedHeadFt = targetHeadFt * fluidPenalty;
+  return { flowInput, flowUnit, headInput, headUnit, sg, viscosity, pumpType, serviceFactor, solidsSize, fluidTemp, materialPreference, targetFlowGpm, targetHeadFt, adjustedHeadFt };
+}
 
-  const scored = curveRows.map(row => {
-    const flowError = Math.abs(row.flowGpm - targetFlowGpm) / Math.max(targetFlowGpm, 1);
-    const headError = Math.abs(row.headFt - adjustedHeadFt) / Math.max(adjustedHeadFt, 1);
-    const typePenalty = pumpType === 'selfpriming' ? 0.05 : pumpType === 'submersible' ? 0.02 : 0;
-    const score = 100 - ((flowError * 65) + (headError * 35) + (typePenalty * 100));
-    const recommendedMotorHp = Math.ceil((row.powerHp * sg * serviceFactor) / 5) * 5;
-    return { ...row, score, recommendedMotorHp, adjustedHeadFt };
+function recommend(e) {
+  if (e) e.preventDefault();
+  const rows = activeRows();
+  if (!rows.length) {
+    alert('Load or upload pump curve data first.');
+    return;
+  }
+  const ctx = buildContext();
+  const scored = rows.map(row => {
+    const flowError = Math.abs(row.flowGpm - ctx.targetFlowGpm) / Math.max(ctx.targetFlowGpm, 1);
+    const headError = Math.abs(row.headFt - ctx.adjustedHeadFt) / Math.max(ctx.adjustedHeadFt, 1);
+    const typePenalty = ctx.pumpType === 'selfpriming' ? 0.05 : ctx.pumpType === 'submersible' ? 0.02 : 0;
+    const solidsPenalty = Math.max(0, ctx.solidsSize - 1) * 0.01;
+    const materialPenalty = ctx.materialPreference === 'abrasive' ? 0.01 : ctx.materialPreference === 'corrosive' ? 0.02 : 0;
+    const score = 100 - ((flowError * 65) + (headError * 35) + ((typePenalty + solidsPenalty + materialPenalty) * 100));
+    const recommendedMotorHp = Math.ceil((row.powerHp * ctx.sg * ctx.serviceFactor) / 5) * 5;
+    return { ...row, score, recommendedMotorHp };
   }).sort((a,b) => b.score - a.score);
 
-  lastRecommendation = { targetFlowGpm, targetHeadFt, adjustedHeadFt, sg, viscosity, pumpType, best: scored[0], scored: scored.slice(0,5) };
+  lastRecommendation = { ...ctx, best: scored[0], scored: scored.slice(0, 8) };
   renderRecommendation();
   drawChart();
 }
@@ -119,40 +148,60 @@ function renderRecommendation() {
     <div class="tile"><div class="k">Best Pump</div><div class="v">${best.model}</div></div>
     <div class="tile"><div class="k">Recommended Motor</div><div class="v">${best.recommendedMotorHp} HP</div></div>`;
 
-  const rows = r.scored.map((row, idx) => `
-    <tr>
-      <td>${idx === 0 ? '<span class="badge">Best Fit</span> ' : ''}${row.model}</td>
-      <td>${row.rotor}</td>
-      <td>${row.flowGpm.toFixed(0)}</td>
-      <td>${row.headFt.toFixed(1)}</td>
-      <td>${row.powerHp.toFixed(1)}</td>
-      <td>${row.recommendedMotorHp}</td>
-      <td>${row.score.toFixed(1)}</td>
-    </tr>`).join('');
+    const rows = r.scored.map((row, idx) => `
+      <tr>
+        <td>${idx === 0 ? '<span class="badge">Best Fit</span> ' : ''}${row.model}</td>
+        <td>${row.rotor}</td>
+        <td>${row.flowGpm.toFixed(0)}</td>
+        <td>${row.headFt.toFixed(1)}</td>
+        <td>${row.powerHp.toFixed(1)}</td>
+        <td>${row.recommendedMotorHp}</td>
+        <td>${row.score.toFixed(1)}</td>
+      </tr>`).join('');
 
   els.recommendationBox.className = 'recommendation';
   els.recommendationBox.innerHTML = `
     <h3>${best.model} recommended</h3>
-    <p><strong>Why:</strong> Best combined match for target flow, adjusted head, fluid penalty, and pump style. Use <strong>${best.recommendedMotorHp} HP</strong> minimum motor sizing with service factor applied.</p>
-    <p><strong>Updated curve note:</strong> The plotted operating point includes a fluid-adjusted head penalty for specific gravity and viscosity. Review NPSH, solids size, and material compatibility before release.</p>
+    <div class="notice">This is a prototype screening tool. Final selection should still verify NPSH, solids pass, material compatibility, and manufacturer curve acceptance.</div>
+    <p><strong>Why:</strong> Best combined match for target flow, adjusted head, fluid penalty, pump type, and motor service factor.</p>
+    <p><strong>Recommended motor:</strong> ${best.recommendedMotorHp} HP minimum, based on ${best.powerHp.toFixed(1)} pump HP × SG ${r.sg.toFixed(2)} × service factor ${r.serviceFactor.toFixed(2)}.</p>
+    <p><strong>Updated curve note:</strong> The plotted operating point includes a fluid-adjusted head penalty for specific gravity, viscosity, and solids burden.</p>
     <table class="table">
       <thead><tr><th>Pump</th><th>Rotor</th><th>Flow gpm</th><th>Head ft</th><th>Pump HP</th><th>Motor HP</th><th>Score</th></tr></thead>
       <tbody>${rows}</tbody>
+    </table>`;
+
+  const compareRows = r.scored.slice(0,5).map(row => `
+    <tr>
+      <td>${row.model}</td>
+      <td>${row.source}</td>
+      <td>${row.rotor}</td>
+      <td>${row.flowGpm.toFixed(0)}</td>
+      <td>${row.headFt.toFixed(1)}</td>
+      <td>${Math.abs(row.flowGpm - r.targetFlowGpm).toFixed(0)}</td>
+      <td>${Math.abs(row.headFt - r.adjustedHeadFt).toFixed(1)}</td>
+      <td>${row.score.toFixed(1)}</td>
+    </tr>`).join('');
+  els.comparisonWrap.className = 'recommendation';
+  els.comparisonWrap.innerHTML = `
+    <table class="table">
+      <thead><tr><th>Model</th><th>Source</th><th>Rotor</th><th>Flow</th><th>Head</th><th>Flow Δ</th><th>Head Δ</th><th>Score</th></tr></thead>
+      <tbody>${compareRows}</tbody>
     </table>`;
 }
 
 function drawChart() {
   const svg = els.curveChart;
   svg.innerHTML = '';
+  els.chartLegend.innerHTML = '';
   if (!curveRows.length || !lastRecommendation) return;
+  const rows = activeRows();
   const width = 900, height = 420, m = {l:60,r:20,t:20,b:50};
-  const data = curveRows;
-  const maxFlow = Math.max(...data.map(d => d.flowGpm), lastRecommendation.targetFlowGpm) * 1.1;
-  const maxHead = Math.max(...data.map(d => d.headFt), lastRecommendation.adjustedHeadFt) * 1.15;
+  const maxFlow = Math.max(...rows.map(d => d.flowGpm), lastRecommendation.targetFlowGpm) * 1.1;
+  const maxHead = Math.max(...rows.map(d => d.headFt), lastRecommendation.adjustedHeadFt) * 1.15;
   const x = v => m.l + (v / maxFlow) * (width - m.l - m.r);
   const y = v => height - m.b - (v / maxHead) * (height - m.t - m.b);
-  const models = [...new Set(data.map(d => d.model))];
-  const colors = ['#2563eb','#16a34a','#dc2626','#9333ea','#ea580c','#0891b2','#4f46e5'];
+  const models = uniqueModels(rows);
 
   const make = (tag, attrs={}) => {
     const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
@@ -171,9 +220,14 @@ function drawChart() {
   make('text',{x:18,y:height/2,'font-size':'13',fill:'#475569',transform:`rotate(-90 18 ${height/2})`,'text-anchor':'middle'}).textContent='Head (ft)';
 
   models.forEach((model, idx) => {
-    const pts = data.filter(d => d.model === model).sort((a,b)=>a.flowGpm-b.flowGpm);
+    const pts = rows.filter(d => d.model === model).sort((a,b)=>a.flowGpm-b.flowGpm);
     const d = pts.map((p,i)=>`${i?'L':'M'} ${x(p.flowGpm)} ${y(p.headFt)}`).join(' ');
-    make('path',{d,fill:'none',stroke:colors[idx%colors.length],'stroke-width':'2.5'});
+    const color = colors[idx % colors.length];
+    make('path',{d,fill:'none',stroke:color,'stroke-width':'2.5'});
+    const item = document.createElement('div');
+    item.className = 'legend-item';
+    item.innerHTML = `<span class="legend-swatch" style="background:${color}"></span>${model}`;
+    els.chartLegend.appendChild(item);
   });
 
   const best = lastRecommendation.best;
@@ -184,21 +238,50 @@ function drawChart() {
 }
 
 function renderLibrary() {
-  els.libraryStats.textContent = `${curveRows.length} curve points loaded across ${new Set(curveRows.map(r => r.model)).size} models.`;
-  const preview = curveRows.slice(0, 10).map(r => `<tr><td>${r.model}</td><td>${r.rotor}</td><td>${r.flowGpm}</td><td>${r.headFt}</td><td>${r.efficiencyPct}</td><td>${r.powerHp}</td></tr>`).join('');
-  els.curveTableWrap.innerHTML = `<table class="table"><thead><tr><th>Model</th><th>Rotor</th><th>Flow gpm</th><th>Head ft</th><th>Eff %</th><th>Power HP</th></tr></thead><tbody>${preview}</tbody></table>`;
+  updateFamilyFilter();
+  const models = uniqueModels(curveRows).length;
+  const sources = [...new Set(curveRows.map(r => r.source))].join(', ');
+  els.libraryStats.textContent = `${curveRows.length} curve points loaded across ${models} models. Sources: ${sources}.`;
+  const preview = curveRows.slice(0, 12).map(r => `<tr><td>${r.model}</td><td>${r.source}</td><td>${r.rotor}</td><td>${r.flowGpm}</td><td>${r.headFt}</td><td>${r.efficiencyPct}</td><td>${r.powerHp}</td></tr>`).join('');
+  els.curveTableWrap.innerHTML = `<table class="table"><thead><tr><th>Model</th><th>Source</th><th>Rotor</th><th>Flow gpm</th><th>Head ft</th><th>Eff %</th><th>Power HP</th></tr></thead><tbody>${preview}</tbody></table>`;
 }
 
-els.loadSampleBtn.addEventListener('click', () => { curveRows = parseCsv(sampleCsv); renderLibrary(); recommend(); });
+function exportJson() {
+  if (!lastRecommendation) return alert('Run a recommendation first.');
+  downloadFile('pump-curve-lab-report.json', JSON.stringify(lastRecommendation, null, 2), 'application/json');
+}
+function exportCsv() {
+  if (!lastRecommendation) return alert('Run a recommendation first.');
+  const lines = ['MODEL,SOURCE,ROTOR,FLOW_GPM,HEAD_FT,PUMP_HP,MOTOR_HP,SCORE'];
+  lastRecommendation.scored.forEach(r => lines.push([r.model,r.source,r.rotor,r.flowGpm,r.headFt,r.powerHp,r.recommendedMotorHp,r.score.toFixed(1)].join(',')));
+  downloadFile('pump-curve-lab-comparison.csv', lines.join('\n'), 'text/csv');
+}
+function exportHtml() {
+  if (!lastRecommendation) return alert('Run a recommendation first.');
+  const r = lastRecommendation;
+  const rows = r.scored.map(x => `<tr><td>${x.model}</td><td>${x.source}</td><td>${x.rotor}</td><td>${x.flowGpm.toFixed(0)}</td><td>${x.headFt.toFixed(1)}</td><td>${x.powerHp.toFixed(1)}</td><td>${x.recommendedMotorHp}</td><td>${x.score.toFixed(1)}</td></tr>`).join('');
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Pump Curve Lab Report</title><style>body{font-family:Arial,sans-serif;padding:24px;color:#111}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ddd;padding:8px;text-align:left}th{background:#f3f4f6}</style></head><body><h1>Pump Curve Lab Report</h1><p><strong>Best pump:</strong> ${r.best.model}</p><p><strong>Target flow:</strong> ${r.targetFlowGpm.toFixed(0)} gpm<br><strong>Adjusted TDH:</strong> ${r.adjustedHeadFt.toFixed(1)} ft<br><strong>Specific gravity:</strong> ${r.sg}<br><strong>Viscosity:</strong> ${r.viscosity} cP<br><strong>Pump type:</strong> ${r.pumpType}</p><table><thead><tr><th>Model</th><th>Source</th><th>Rotor</th><th>Flow gpm</th><th>Head ft</th><th>Pump HP</th><th>Motor HP</th><th>Score</th></tr></thead><tbody>${rows}</tbody></table></body></html>`;
+  downloadFile('pump-curve-lab-report.html', html, 'text/html');
+}
+
+els.loadSampleBtn.addEventListener('click', () => { curveRows = parseCsv(sampleCsv, 'sample-library'); renderLibrary(); recommend(); });
 els.calcTdhBtn.addEventListener('click', calcTdh);
+els.exportJsonBtn.addEventListener('click', exportJson);
+els.exportCsvBtn.addEventListener('click', exportCsv);
+els.exportHtmlBtn.addEventListener('click', exportHtml);
+els.printBtn.addEventListener('click', () => window.print());
+els.familyFilter.addEventListener('change', () => recommend());
 els.appForm.addEventListener('submit', recommend);
 els.curveFile.addEventListener('change', async (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
-  curveRows = parseCsv(await file.text());
+  const files = [...e.target.files];
+  if (!files.length) return;
+  const parsed = [];
+  for (const file of files) parsed.push(...parseCsv(await file.text(), file.name));
+  curveRows = parsed;
   renderLibrary();
+  recommend();
 });
 
-curveRows = parseCsv(sampleCsv);
+curveRows = parseCsv(sampleCsv, 'sample-library');
 renderLibrary();
 recommend();

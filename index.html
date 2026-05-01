@@ -10,9 +10,12 @@
   <header class="hero">
     <div>
       <h1>Pump Curve Lab</h1>
-      <p>Upload pump curves, calculate TDH, account for fluid properties, and generate a best-fit pump and motor recommendation with an updated operating curve.</p>
+      <p>Upload pump curves, calculate TDH, account for fluid properties, compare multiple pump families, and generate a best-fit pump and motor recommendation with an updated operating curve.</p>
     </div>
-    <button id="loadSampleBtn">Load sample curves</button>
+    <div class="hero-actions">
+      <button id="loadSampleBtn">Load sample curves</button>
+      <button id="printBtn">Print / Save PDF</button>
+    </div>
   </header>
 
   <main class="layout">
@@ -83,17 +86,41 @@
           </label>
         </div>
 
+        <div class="grid three">
+          <label>Solids Size (in)
+            <input type="number" id="solidsSize" value="0.5" step="0.1" min="0" />
+          </label>
+          <label>Fluid Temperature (°F)
+            <input type="number" id="fluidTemp" value="70" step="1" />
+          </label>
+          <label>Material Preference
+            <select id="materialPreference">
+              <option value="standard">Standard</option>
+              <option value="abrasive">Abrasive / wear resistant</option>
+              <option value="corrosive">Corrosive / upgraded materials</option>
+            </select>
+          </label>
+        </div>
+
         <div class="actions">
           <button type="button" id="calcTdhBtn">Calculate TDH from pipe variables</button>
           <button type="submit">Recommend pump</button>
+          <button type="button" id="exportJsonBtn">Export JSON</button>
+          <button type="button" id="exportCsvBtn">Export CSV</button>
+          <button type="button" id="exportHtmlBtn">Export HTML report</button>
         </div>
       </form>
     </section>
 
     <section class="card upload-card">
       <h2>2. Pump curve library</h2>
-      <p>Upload CSV with columns like: <code>MODEL,ROTOR,FLOW_GPM,HEAD_FT,EFFICIENCY_PCT,POWER_HP</code></p>
-      <input type="file" id="curveFile" accept=".csv" />
+      <p>Upload one or more CSV files with columns like: <code>MODEL,ROTOR,FLOW_GPM,HEAD_FT,EFFICIENCY_PCT,POWER_HP</code></p>
+      <input type="file" id="curveFile" accept=".csv" multiple />
+      <div class="inline-tools">
+        <label>Filter family / model
+          <select id="familyFilter"><option value="all">All loaded models</option></select>
+        </label>
+      </div>
       <div id="libraryStats" class="muted">No curves loaded yet.</div>
       <div id="curveTableWrap"></div>
     </section>
@@ -104,9 +131,15 @@
       <div id="recommendationBox" class="recommendation empty">Run a recommendation to see results.</div>
     </section>
 
+    <section class="card comparison-card">
+      <h2>4. Top pump comparison</h2>
+      <div id="comparisonWrap" class="recommendation empty">Top recommendations will appear here.</div>
+    </section>
+
     <section class="card chart-card full">
-      <h2>4. Updated operating curve</h2>
+      <h2>5. Updated operating curve</h2>
       <svg id="curveChart" viewBox="0 0 900 420" role="img" aria-label="Pump curve chart"></svg>
+      <div id="chartLegend" class="legend"></div>
     </section>
   </main>
 
