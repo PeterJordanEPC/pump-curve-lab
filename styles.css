@@ -66,7 +66,7 @@ code { background: #f1f5f9; padding: 2px 6px; border-radius: 8px; }
   padding: 20px;
 }
 .streamlined-layout {
-  grid-template-columns: minmax(340px, 440px) minmax(0, 1fr);
+  grid-template-columns: minmax(360px, 480px) minmax(0, 1fr);
   align-items: start;
 }
 .results-column {
@@ -160,14 +160,15 @@ input:focus, select:focus {
 
 .lead-recommendation-band {
   display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
-  gap: 14px;
-  padding: 18px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px;
+  padding: 16px;
   margin: 14px 0;
   border-radius: 18px;
   border: 1px solid #c7d2fe;
   background: linear-gradient(135deg, #eef2ff, #ffffff);
   min-width: 0;
+  overflow: hidden;
 }
 .lead-band-title {
   font-size: 12px;
@@ -178,16 +179,16 @@ input:focus, select:focus {
 }
 .lead-band-pump {
   margin-top: 6px;
-  font-size: clamp(28px, 4vw, 40px);
+  font-size: clamp(22px, 3vw, 32px);
   font-weight: 900;
-  line-height: 1.05;
+  line-height: 1.1;
   color: #0f172a;
 }
 .lead-band-copy, .rule-note { margin-top: 8px; color: #475569; }
 .lead-band-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(140px, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
   min-width: 0;
 }
 .lead-band-tile, .exec-metric, .summary-grid .tile, .result-note {
@@ -202,7 +203,8 @@ input:focus, select:focus {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  min-height: 92px;
+  padding: 10px;
+  min-height: 0;
 }
 .lead-band-tile .k, .exec-metric .k, .summary-grid .tile .k {
   color: var(--muted);
@@ -213,14 +215,21 @@ input:focus, select:focus {
   word-break: normal;
   overflow-wrap: normal;
 }
-.lead-band-tile .v, .exec-metric .v, .summary-grid .tile .v {
+.lead-band-tile .v {
+  margin-top: 4px;
+  font-size: 15px;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1.15;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.exec-metric .v, .summary-grid .tile .v {
   margin-top: 6px;
   font-size: 19px;
   font-weight: 800;
   color: #0f172a;
-  line-height: 1.15;
-  word-break: normal;
-  overflow-wrap: normal;
 }
 
 .advanced-panel, .preview-panel {
