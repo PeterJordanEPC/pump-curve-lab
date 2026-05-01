@@ -4,6 +4,7 @@ Pump Curve Lab is a browser-based prototype for testing pump curve uploads, duty
 
 ## What it does
 - Upload one or more pump curve CSVs
+- Interpolate each pump family to the requested duty-point flow
 - Accept flow in US or metric units
 - Accept pressure or TDH in multiple units
 - Calculate TDH from pipe variables
@@ -13,6 +14,7 @@ Pump Curve Lab is a browser-based prototype for testing pump curve uploads, duty
 - Plot the requested operating point against uploaded curves
 - Export recommendation results to JSON, CSV, or HTML
 - Print or Save PDF from the browser
+- Save and reload project files locally
 
 ## Current prototype scope
 This is a practical evaluation app, not a final released hydraulic design system.
@@ -27,7 +29,7 @@ It still needs engineering validation for:
 - NPSH / suction margin
 - cavitation risk
 - solids passage and wear life
-- manufacturer-approved curve interpolation
+- manufacturer-approved curve interpolation and acceptance windows
 - exact motor starting/current margin
 - material compatibility and temperature derating
 
@@ -63,7 +65,7 @@ Open:
 ## Test workflow
 1. Load the sample curves or upload one or more CSV files.
 2. Enter target flow and pressure/TDH.
-3. Enter specific gravity, viscosity, pump style, and pipe variables.
+3. Enter specific gravity, viscosity, solids size, and pump style.
 4. Use **Calculate TDH from pipe variables** if needed.
 5. Click **Recommend pump**.
 6. Review:
@@ -71,18 +73,21 @@ Open:
    - recommended motor HP
    - comparison table
    - plotted operating point
-7. Export JSON / CSV / HTML or use Print / Save PDF.
+7. Export JSON / CSV / HTML, Print / Save PDF, or save a project file.
+8. Reload a saved project JSON to resume work later.
+
+## What changed in this version
+- Added family interpolation at the requested flow before ranking pumps
+- Added local project save/load
+- Added richer branded HTML report export
+- Added print-to-PDF workflow
+- Added more application inputs and clearer recommendation explanation
 
 ## Suggested next development steps
-1. true curve interpolation instead of point scoring
-2. multi-point curve smoothing and family envelopes
-3. backend persistence for uploaded libraries
-4. user accounts and saved projects
-5. full pipe/TDH calculator with fittings library
-6. NPSH and suction configuration logic
-7. editable manufacturer-specific pump rules
-8. PDF report styling and branded output
-9. GitHub Actions deploy preview
-
-## Repo usage
-This app was pushed as a standalone repo so it can be tested independently without mixing with the rest of the workspace automation.
+1. true backend persistence with user accounts
+2. polished branded PDF generation server-side
+3. full fittings library and more robust TDH calculator
+4. manufacturer-specific curve rules and warning thresholds
+5. NPSH and suction-condition calculator
+6. solids/wear/material selection advisor
+7. deploy preview or hosted staging environment
