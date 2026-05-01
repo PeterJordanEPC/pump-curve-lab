@@ -6,131 +6,82 @@
 // Covers every size band from 1-in through 16-in plus HH2000.
 // Existing HD-series kept for CSV-upload backward compatibility.
 const defaultLibraryCsv = `MODEL,ROTOR,FLOW_GPM,HEAD_FT,EFFICIENCY_PCT,POWER_HP
-ED-1,1-in,0,45,0,0
-ED-1,1-in,8,43,12,0.3
-ED-1,1-in,18,39,22,0.7
-ED-1,1-in,30,32,28,1.1
-ED-1,1-in,42,22,25,1.6
-ED-1,1-in,50,14,18,2.0
-ED-2,2-in,0,82,0,0
-ED-2,2-in,30,78,10,1.8
-ED-2,2-in,60,72,18,3.2
-ED-2,2-in,100,62,26,5.0
-ED-2,2-in,140,48,30,6.8
-ED-2,2-in,180,32,26,8.5
-ED-2,2-in,200,22,20,9.5
-HH2000,HH,0,185,0,0
-HH2000,HH,30,178,8,5.0
-HH2000,HH,60,168,14,8.5
-HH2000,HH,100,150,20,12.0
-HH2000,HH,140,128,24,15.5
-HH2000,HH,180,100,22,19.0
-HH2000,HH,200,82,18,22.0
-ED-3,3-in,0,92,0,0
-ED-3,3-in,60,87,10,4.5
-ED-3,3-in,130,78,18,8.0
-ED-3,3-in,200,68,24,11.0
-ED-3,3-in,280,54,28,14.5
-ED-3,3-in,350,40,26,17.5
-ED-3,3-in,400,28,22,20.0
-ED-4,4-in,0,75,0,0
-ED-4,4-in,120,70,10,7.0
-ED-4,4-in,250,64,17,12.0
-ED-4,4-in,400,55,23,17.0
-ED-4,4-in,550,45,27,22.0
-ED-4,4-in,700,34,26,27.0
-ED-4,4-in,850,22,22,31.0
-ED-4,4-in,900,18,19,33.0
-ED-6,6-in,0,82,0,0
-ED-6,6-in,200,78,10,14.0
-ED-6,6-in,450,72,18,24.0
-ED-6,6-in,700,63,24,35.0
-ED-6,6-in,1000,52,28,46.0
-ED-6,6-in,1300,38,26,56.0
-ED-6,6-in,1500,26,22,64.0
-ED-6,6-in,1600,20,18,68.0
-ED-8,8-in,0,98,0,0
-ED-8,8-in,350,93,10,30.0
-ED-8,8-in,700,86,18,50.0
-ED-8,8-in,1100,76,24,72.0
-ED-8,8-in,1600,62,30,95.0
-ED-8,8-in,2000,48,28,112.0
-ED-8,8-in,2400,32,22,130.0
-ED-8,8-in,2500,26,18,138.0
-ED-10,10-in,0,105,0,0
-ED-10,10-in,500,99,10,50.0
-ED-10,10-in,1000,90,18,78.0
-ED-10,10-in,1600,80,24,105.0
-ED-10,10-in,2200,66,28,135.0
-ED-10,10-in,2800,50,28,160.0
-ED-10,10-in,3200,36,24,180.0
-ED-10,10-in,3500,24,18,200.0
-ED-12,12-in,0,115,0,0
-ED-12,12-in,700,108,10,70.0
-ED-12,12-in,1500,98,18,115.0
-ED-12,12-in,2500,84,24,160.0
-ED-12,12-in,3500,68,28,210.0
-ED-12,12-in,4500,50,26,260.0
-ED-12,12-in,5500,32,22,310.0
-ED-12,12-in,6000,22,18,340.0
-ED-16,16-in,0,125,0,0
-ED-16,16-in,1500,118,10,150.0
-ED-16,16-in,3000,108,18,260.0
-ED-16,16-in,5000,92,24,400.0
-ED-16,16-in,7000,74,28,540.0
-ED-16,16-in,9000,54,26,680.0
-ED-16,16-in,11000,32,22,800.0
-ED-16,16-in,12000,22,18,880.0
-HD2000,8 inch,0,62,0,0
-HD2000,8 inch,150,58,12,10
-HD2000,8 inch,300,54,18,13
-HD2000,8 inch,450,49,21,16
-HD2000,8 inch,607,45,22,18
-HD2000,8 inch,750,39,20,20
-HD3000,9.5 inch,0,58,0,0
-HD3000,9.5 inch,200,54,14,12
-HD3000,9.5 inch,400,50,19,16
-HD3000,9.5 inch,650,45,23,21
-HD3000,9.5 inch,885,40,24,26
-HD3000,9.5 inch,1050,34,22,28
-HD4000,10 inch,0,48,0,0
-HD4000,10 inch,300,45,14,18
-HD4000,10 inch,600,41,19,24
-HD4000,10 inch,1000,35,24,30
-HD4000,10 inch,1480,29.9,28,39.4
-HD4000,10 inch,1700,24,25,42
-HD5000,12 inch,0,50,0,0
-HD5000,12 inch,400,46,15,22
-HD5000,12 inch,800,41,22,30
-HD5000,12 inch,1200,35,27,36
-HD5000,12 inch,1575,30.4,29,41.6
-HD5000,12 inch,1900,23,25,45
-HD6000,14 inch,0,72,0,0
-HD6000,14 inch,500,67,16,35
-HD6000,14 inch,1000,60,24,48
-HD6000,14 inch,1500,54,30,60
-HD6000,14 inch,1956,50.1,34,71.8
-HD6000,14 inch,2300,42,30,80
-HD8000,17 inch,0,100,0,0
-HD8000,17 inch,500,93,14,55
-HD8000,17 inch,1000,86,22,80
-HD8000,17 inch,1500,79,28,100
-HD8000,17 inch,2100,75,35,120
-HD8000,17 inch,2300,65,37,130
-HD8000,17 inch,2800,49,30,140`;
+HD1000,1.5 inch,0,170,0,0
+HD1000,1.5 inch,1,168,5,0.1
+HD1000,1.5 inch,25,155,18,0.8
+HD1000,1.5 inch,60,135,28,2.0
+HD1000,1.5 inch,100,110,35,3.5
+HD1000,1.5 inch,150,75,30,5.5
+HD1000,1.5 inch,200,35,18,7.0
+HD2000,3 inch,0,90,0,0
+HD2000,3 inch,50,86,12,3.0
+HD2000,3 inch,100,80,20,5.5
+HD2000,3 inch,180,68,28,8.5
+HD2000,3 inch,260,52,32,11.0
+HD2000,3 inch,340,32,28,14.0
+HD2000,3 inch,390,18,20,16.0
+HH2000,3 inch,0,350,0,0
+HH2000,3 inch,100,330,10,12.0
+HH2000,3 inch,200,295,18,20.0
+HH2000,3 inch,300,255,24,28.0
+HH2000,3 inch,400,205,28,36.0
+HH2000,3 inch,500,145,26,44.0
+HH2000,3 inch,600,80,18,52.0
+HD3000,4 inch,0,130,0,0
+HD3000,4 inch,100,125,10,6.0
+HD3000,4 inch,200,115,18,10.0
+HD3000,4 inch,350,98,26,16.0
+HD3000,4 inch,500,78,30,22.0
+HD3000,4 inch,650,52,28,28.0
+HD3000,4 inch,780,28,20,34.0
+HD4000,6 inch,0,160,0,0
+HD4000,6 inch,250,150,12,15.0
+HD4000,6 inch,450,135,20,25.0
+HD4000,6 inch,650,115,26,36.0
+HD4000,6 inch,850,90,30,48.0
+HD4000,6 inch,1050,58,28,58.0
+HD4000,6 inch,1200,32,22,65.0
+HD6000,8 inch,0,200,0,0
+HD6000,8 inch,450,188,10,35.0
+HD6000,8 inch,800,172,18,55.0
+HD6000,8 inch,1200,148,24,80.0
+HD6000,8 inch,1600,118,28,105.0
+HD6000,8 inch,2000,80,26,130.0
+HD6000,8 inch,2500,35,18,160.0
+HD8000,10 inch,0,230,0,0
+HD8000,10 inch,1400,210,14,90.0
+HD8000,10 inch,2000,190,22,130.0
+HD8000,10 inch,2500,165,28,160.0
+HD8000,10 inch,3000,130,30,195.0
+HD8000,10 inch,3400,90,26,230.0
+HD8000,10 inch,3600,65,20,250.0
+HD10000,12 inch,0,240,0,0
+HD10000,12 inch,1600,225,12,120.0
+HD10000,12 inch,2500,205,20,180.0
+HD10000,12 inch,3200,178,26,240.0
+HD10000,12 inch,4000,140,30,310.0
+HD10000,12 inch,4600,100,26,370.0
+HD10000,12 inch,5000,65,20,420.0
+HD12000,14 inch,0,180,0,0
+HD12000,14 inch,2600,168,12,200.0
+HD12000,14 inch,3500,152,18,300.0
+HD12000,14 inch,4500,130,24,420.0
+HD12000,14 inch,5500,102,28,540.0
+HD12000,14 inch,6500,68,26,660.0
+HD12000,14 inch,7300,35,18,780.0`;
 
 // ── Size-band mapping (used for scoring bonus) ─────────────────────
 const sizeBandMap = {
-  'ED-1': [5, 50],
-  'ED-2': [50, 200],
-  'HH2000': [50, 200],   // high-head variant
-  'ED-3': [200, 400],
-  'ED-4': [400, 900],
-  'ED-6': [900, 1600],
-  'ED-8': [1600, 2500],
-  'ED-10': [2500, 3500],
-  'ED-12': [3500, 6000],
-  'ED-16': [6000, 12000],
+  'HD1000': [1, 200],
+  'HD2000': [50, 390],
+  'HH2000': [100, 600],   // high-head variant
+  'HD3000': [100, 780],
+  'HD4000': [250, 1200],
+  // HD5000 intentionally excluded (5-in pump)
+  'HD6000': [450, 2500],
+  'HD8000': [1400, 3600],
+  'HD10000': [1600, 5000],
+  'HD12000': [2600, 7300],
 };
 
 let curveRows = [];
@@ -365,15 +316,15 @@ function findOperatingPoint(pumpPoints, systemPoints) {
 // ── Lead pump-sizing rules ─────────────────────────────────────────
 
 function getGeneralPumpRecommendation(flowGpm, adjustedHeadFt) {
-  if (flowGpm >= 5 && flowGpm < 50) return '1-in Pump';
-  if (flowGpm >= 50 && flowGpm < 200) return adjustedHeadFt > 120 ? 'HH2000' : '2-in Pump';
-  if (flowGpm >= 200 && flowGpm < 400) return '3-in Pump';
-  if (flowGpm >= 400 && flowGpm < 900) return '4-in Pump';
-  if (flowGpm >= 900 && flowGpm < 1600) return '6-in Pump';
-  if (flowGpm >= 1600 && flowGpm < 2500) return '8-in Pump';
-  if (flowGpm >= 2500 && flowGpm < 3500) return '10-in Pump';
-  if (flowGpm >= 3500 && flowGpm < 6000) return '12-in Pump';
-  if (flowGpm >= 6000 && flowGpm <= 12000) return '16-in Pump';
+  if (flowGpm >= 1 && flowGpm < 50) return 'HD1000 (1-in)';
+  if (flowGpm >= 50 && flowGpm < 200) return adjustedHeadFt > 120 ? 'HH2000 (2-in high-head)' : 'HD2000 (2-in)';
+  if (flowGpm >= 200 && flowGpm < 400) return 'HD3000 (3-in)';
+  if (flowGpm >= 400 && flowGpm < 900) return 'HD4000 (4-in)';
+  if (flowGpm >= 900 && flowGpm < 1600) return 'HD6000 (6-in)';
+  if (flowGpm >= 1600 && flowGpm < 2500) return 'HD8000 (8-in)';
+  if (flowGpm >= 2500 && flowGpm < 3500) return 'HD8000 (8-in)';
+  if (flowGpm >= 3500 && flowGpm < 6000) return 'HD10000 (10-in)';
+  if (flowGpm >= 6000 && flowGpm <= 12000) return 'HD12000 (12-in)';
   return 'Outside standard range';
 }
 
@@ -386,17 +337,17 @@ function getSizingRuleNote(flowGpm, adjustedHeadFt) {
 
 function avoidFiveInPumpNote() { return 'Avoid 5-in pump when making suggestions'; }
 
-/** Map general recommendation text → preferred ED-model name */
+/** Map general recommendation text → preferred model name */
 function recommendedModelForBand(flowGpm, adjustedHeadFt) {
-  if (flowGpm >= 5 && flowGpm < 50) return 'ED-1';
-  if (flowGpm >= 50 && flowGpm < 200) return adjustedHeadFt > 120 ? 'HH2000' : 'ED-2';
-  if (flowGpm >= 200 && flowGpm < 400) return 'ED-3';
-  if (flowGpm >= 400 && flowGpm < 900) return 'ED-4';
-  if (flowGpm >= 900 && flowGpm < 1600) return 'ED-6';
-  if (flowGpm >= 1600 && flowGpm < 2500) return 'ED-8';
-  if (flowGpm >= 2500 && flowGpm < 3500) return 'ED-10';
-  if (flowGpm >= 3500 && flowGpm < 6000) return 'ED-12';
-  if (flowGpm >= 6000 && flowGpm <= 12000) return 'ED-16';
+  if (flowGpm >= 1 && flowGpm < 50) return 'HD1000';
+  if (flowGpm >= 50 && flowGpm < 200) return adjustedHeadFt > 120 ? 'HH2000' : 'HD2000';
+  if (flowGpm >= 200 && flowGpm < 400) return 'HD3000';
+  if (flowGpm >= 400 && flowGpm < 900) return 'HD4000';
+  if (flowGpm >= 900 && flowGpm < 1600) return 'HD6000';
+  if (flowGpm >= 1600 && flowGpm < 2500) return 'HD8000';
+  if (flowGpm >= 2500 && flowGpm < 3500) return 'HD8000';
+  if (flowGpm >= 3500 && flowGpm < 6000) return 'HD10000';
+  if (flowGpm >= 6000 && flowGpm <= 12000) return 'HD12000';
   return null;
 }
 
