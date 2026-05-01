@@ -173,9 +173,9 @@ function renderRecommendation() {
   els.summaryCards.innerHTML = `
     <div class="tile"><div class="k">Target Flow</div><div class="v">${r.targetFlowGpm.toFixed(0)} gpm</div></div>
     <div class="tile"><div class="k">Adjusted TDH</div><div class="v">${r.adjustedHeadFt.toFixed(1)} ft</div></div>
-    <div class="tile"><div class="k">Best Pump</div><div class="v">${best.model}</div></div>
+    <div class="tile"><div class="k">Curve-Based Recommendation</div><div class="v">${best.model}</div></div>
     <div class="tile"><div class="k">Recommended Motor</div><div class="v">${best.recommendedMotorHp} HP</div></div>
-    <div class="tile"><div class="k">General Size Band</div><div class="v">${r.generalRecommendation}</div></div>
+    <div class="tile"><div class="k">General Recommendation</div><div class="v">${r.generalRecommendation}</div></div>
     <div class="tile"><div class="k">Sizing Rule</div><div class="v">${r.avoidFiveInPump}</div></div>`;
   const rows = r.scored.slice(0, 8).map((row, idx) => `
     <tr>
@@ -189,11 +189,12 @@ function renderRecommendation() {
     </tr>`).join('');
   els.recommendationBox.className = 'recommendation';
   els.recommendationBox.innerHTML = `
-    <h3>${best.model} recommended</h3>
+    <h3>Recommendation summary</h3>
     <div class="notice">Prototype output only. Final engineering release should still confirm NPSH, solids handling, wear, and manufacturer-approved curve suitability.</div>
     <p><strong>Project:</strong> ${r.projectName} <br><strong>Reference:</strong> ${r.projectRef}</p>
-    <p><strong>General recommendation band:</strong> ${r.generalRecommendation}</p>
-    <p><strong>Why:</strong> Best interpolated family match for target flow, adjusted head, fluid penalty, pump type, and motor service factor.</p>
+    <p><strong>General recommendation:</strong> ${r.generalRecommendation}</p>
+    <p><strong>Curve-based recommendation:</strong> ${best.model}</p>
+    <p><strong>Why:</strong> The general recommendation follows your size-band rules. The curve-based recommendation is the best interpolated family match for target flow, adjusted head, fluid penalty, pump type, and motor service factor.</p>
     <p><strong>Recommended motor:</strong> ${best.recommendedMotorHp} HP minimum, based on ${best.powerHp.toFixed(1)} pump HP × SG ${r.sg.toFixed(2)} × service factor ${r.serviceFactor.toFixed(2)}.</p>
     <p><strong>Rule reminder:</strong> ${r.avoidFiveInPump}</p>
     <p><strong>Updated curve note:</strong> The plotted operating point includes a fluid-adjusted head penalty for specific gravity, viscosity, and solids burden.</p>
@@ -213,7 +214,10 @@ function renderRecommendation() {
       <td>${row.score.toFixed(1)}</td>
     </tr>`).join('');
   els.comparisonWrap.className = 'recommendation';
-  els.comparisonWrap.innerHTML = `<table class="table"><thead><tr><th>Model</th><th>Source</th><th>Rotor</th><th>Interpolated Flow</th><th>Interpolated Head</th><th>Flow Error</th><th>Head Error</th><th>Score</th></tr></thead><tbody>${compareRows}</tbody></table>`;
+  els.comparisonWrap.innerHTML = `
+    <p><strong>General recommendation:</strong> ${r.generalRecommendation}</p>
+    <p><strong>Top curve-based match:</strong> ${best.model}</p>
+    <table class="table"><thead><tr><th>Model</th><th>Source</th><th>Rotor</th><th>Interpolated Flow</th><th>Interpolated Head</th><th>Flow Error</th><th>Head Error</th><th>Score</th></tr></thead><tbody>${compareRows}</tbody></table>`;
 }
 
 function drawChart() {
