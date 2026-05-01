@@ -88,6 +88,20 @@ let curveRows = [];
 let lastRecommendation = null;
 let autoRecommendTimer = null;
 
+const fluidPresets = {
+  water: { sg: 1.0, viscosity: 1, temp: 70 },
+  sand_seawater: { sg: 2.65, viscosity: 1.1, temp: 70 },
+  pond_silt: { sg: 1.60, viscosity: 10, temp: 70 },
+  clay_homogenized: { sg: 1.44, viscosity: 1000, temp: 70 },
+  clay_cuttings: { sg: 1.40, viscosity: 10, temp: 70 },
+  garnet_water: { sg: 3.20, viscosity: 1.1, temp: 70 },
+  lime_slurry: { sg: 2.40, viscosity: 250, temp: 70 },
+  waste_water: { sg: 1.10, viscosity: 1.1, temp: 70 },
+  oil_sludge: { sg: 1.00, viscosity: 200, temp: 70 },
+  crude_oil: { sg: 0.85, viscosity: 660, temp: 70 },
+  oil_drill_cuttings: { sg: 1.80, viscosity: 25, temp: 70 },
+};
+
 const colors = ['#2563eb','#16a34a','#dc2626','#9333ea','#ea580c','#0891b2','#4f46e5','#d97706','#0f766e'];
 const $ = id => document.getElementById(id);
 const els = {
@@ -116,7 +130,7 @@ const els = {
   leadRecommendationBand: $('leadRecommendationBand'),
   formCard: $('formCard'),
 };
-const fieldIds = ['projectName','projectRef','applicationType','flowRate','flowUnit','headValue','headUnit','workflowMode','pumpType','specificGravity','viscosity','staticHead','pipeLength','pipeDiameter','elevationFt','atmosphericPressure','pipeFactor','fittingsCount','motorServiceFactor','solidsSize','fluidTemp','materialPreference','percentSolidsByWeight','availableMotorHp','motorVoltage','motorFrequency','targetRpm','useVfd','suctionLift','suctionHoseLength','tankSurfacePressure','submergenceDepth','coolingMethod','powerCableLength'];
+const fieldIds = ['projectName','projectRef','applicationType','flowRate','flowUnit','headValue','headUnit','workflowMode','pumpType','specificGravity','viscosity','fluidPreset','staticHead','pipeLength','pipeDiameter','elevationFt','atmosphericPressure','pipeFactor','fittingsCount','motorServiceFactor','solidsSize','fluidTemp','materialPreference','percentSolidsByWeight','availableMotorHp','motorVoltage','motorFrequency','targetRpm','useVfd','suctionLift','suctionHoseLength','tankSurfacePressure','submergenceDepth','coolingMethod','powerCableLength'];
 const autoRunFieldSet = new Set(fieldIds);
 const requiredCoreFieldIds = ['flowRate','headValue','specificGravity'];
 
@@ -425,6 +439,7 @@ function getWorkflowGuidance(ctx) {
   }
   if (ctx.targetFlowGpm >= 50 && ctx.targetFlowGpm < 200 && ctx.adjustedHeadFt > 120) notes.push('High-head exception: 50–200 GPM with head > 120 ft → prefer HH2000.');
   notes.push('Avoid 5-in pump recommendations unless there is a very strong override reason.');
+  notes.push('Largest rotor principle: Select the largest diameter rotor that fits the pump casing for available HP — larger rotors at lower speed last longer in abrasive service.');
   notes.push('Use job/engineering judgment on motor sizing — manual override may be needed after VFD/RPM review.');
   if (ctx.materialPreference === 'abrasive') notes.push('Abrasive slurry: a faster small-rotor pump wears far faster than a slower large-rotor pump.');
   if (ctx.availableMotorHp > 0) notes.push('Customer motor limit entered: keep within available HP when possible.');
@@ -481,6 +496,20 @@ function getModeAdjustedHead(ctx) {
   return Math.max(adjusted, 0);
 }
 
+function getPipeVelocityWarning(ctx) {
+  const pipeDia = Number($('pipeDiameter')?.value || 0);
+  if (!pipeDia || pipeDia <= 0) return null;
+  const areaFt2 = Math.PI * Math.pow(pipeDia / 12 / 2, 2);
+  const velocityFps = (ctx.targetFlowGpm / 448.83) / areaFt2;
+  const isSand = ctx.materialPreference === 'abrasive' || ctx.applicationType === 'Dredging';
+  const minVelocity = isSand ? 15 : 5;
+  const materialType = isSand ? 'sand/abrasive (settling slurry)' : 'silt/sewage/clay (non-settling)';
+  if (velocityFps < minVelocity) {
+    return `⚠️ Pipeline velocity is ${velocityFps.toFixed(1)} ft/sec in ${pipeDia}" pipe — below the ${minVelocity} ft/sec minimum for ${materialType}. Risk of settling and plugging.`;
+  }
+  return null;
+}
+
 function getModeWarnings(ctx, best) {
   const warnings = [];
   if (ctx.workflowMode === 'selfpriming') {
@@ -490,6 +519,16 @@ function getModeWarnings(ctx, best) {
   }
   if (ctx.workflowMode === 'electric') {
     if (ctx.useVfd === 'yes' && ctx.targetRpm < 1800) warnings.push('VFD / reduced RPM: base motor HP must be checked.');
+    if (ctx.workflowMode === 'electric' && ctx.useVfd === 'yes' && ctx.targetRpm && ctx.targetRpm < 1800) {
+      const baseRpm = 1800;
+      const speedRatio = ctx.targetRpm / baseRpm;
+      const availableHpFraction = Math.pow(speedRatio, 3);
+      if (best && best.recommendedMotorHp > 0) {
+        const requiredBaseHp = best.recommendedMotorHp / availableHpFraction;
+        const roundedBaseHp = Math.max(5, Math.ceil(requiredBaseHp / 5) * 5);
+        warnings.push(`VFD cube law: At ${ctx.targetRpm} RPM (${(speedRatio*100).toFixed(0)}% of 1800), motor delivers ${(availableHpFraction*100).toFixed(0)}% of rated HP. Need ${roundedBaseHp} HP base motor to get ${best.recommendedMotorHp} HP at operating speed.`);
+      }
+    }
     if (ctx.materialPreference === 'abrasive' && ctx.targetRpm > 1500) warnings.push('Wear warning: abrasive slurry + high RPM accelerates wear.');
   }
   if (ctx.workflowMode === 'submersible') {
@@ -500,10 +539,34 @@ function getModeWarnings(ctx, best) {
   if (ctx.workflowMode === 'selfpriming') warnings.push('Self-prime motor: include ~2 HP overhead for vacuum pump package.');
   if (ctx.availableMotorHp > 0 && best && best.recommendedMotorHp > ctx.availableMotorHp) warnings.push(`Motor limit: needs ${best.recommendedMotorHp} HP but customer available is ${ctx.availableMotorHp} HP.`);
   if (ctx.motorVoltage && ctx.motorVoltage !== '460') warnings.push(`Non-standard voltage (${ctx.motorVoltage} V) — confirm motor availability.`);
+  const pipeWarning = getPipeVelocityWarning(ctx);
+  if (pipeWarning) warnings.push(pipeWarning);
   return warnings;
 }
 
 // ── TDH calculator ─────────────────────────────────────────────────
+
+// 1 yd³ = 201.974 US gallons
+function calcProductionRate() {
+  const qty = Number($('projectQuantity')?.value || 0);
+  const hours = Number($('pumpingHours')?.value || 0);
+  const solidsPct = Number($('productionSolidsPct')?.value || 30) / 100;
+  const resultEl = $('productionResult');
+  if (!qty || !hours || hours <= 0) {
+    if (resultEl) resultEl.textContent = 'Enter quantity and hours to calculate.';
+    return;
+  }
+  const yd3PerHr = qty / hours;
+  const gallonsPerHr = yd3PerHr * 201.974;
+  const slurryGpm = gallonsPerHr / 60 / solidsPct;
+  const cleanGpm = gallonsPerHr / 60;
+  if (resultEl) {
+    resultEl.innerHTML = `<strong>Production:</strong> ${yd3PerHr.toFixed(1)} yd³/hr<br>` +
+      `<strong>Clean flow:</strong> ${cleanGpm.toFixed(0)} GPM<br>` +
+      `<strong>Slurry flow at ${(solidsPct*100).toFixed(0)}% solids:</strong> ${slurryGpm.toFixed(0)} GPM<br>` +
+      `<em>Tip: Use the slurry flow value as your Flow Rate above.</em>`;
+  }
+}
 
 function calcTdh() {
   const staticHead = Number($('staticHead').value || 0);
@@ -695,6 +758,12 @@ function renderRecommendation() {
   const warnings = r.modeWarnings || [];
   const porText = best.porBand ? `${best.porBand.low.toFixed(0)}–${best.porBand.high.toFixed(0)} gpm` : 'N/A';
   const bepText = best.bep ? `${best.bep.flowGpm.toFixed(0)} gpm @ ${best.bep.efficiencyPct.toFixed(1)}%` : 'N/A';
+  const ctx = buildContext();
+  const matRec = ctx.materialPreference === 'abrasive' ? 
+    'Recommended material: <strong>High Chrome</strong> (pH 2–14, abrasive-rated). For maximum wear life with abrasive slurry, prefer lower RPM and larger rotor.' :
+    ctx.materialPreference === 'corrosive' ?
+    'Recommended material: <strong>316 Stainless Steel</strong> (pH 0–14, corrosion-rated). Not compatible with muriatic acids.' :
+    'Standard material suitable for this application.';
 
   els.summaryCards.innerHTML = `
     <div class="executive-summary">
@@ -738,6 +807,7 @@ function renderRecommendation() {
       </div>
       ${warnings.length ? `<div class="notice"><strong>Key warnings</strong><ul class="warning-list">${warnings.map(n => `<li>${n}</li>`).join('')}</ul></div>` : ''}
       <div class="result-note"><strong>Note:</strong> ${r.avoidFiveInPump}. Verify NPSH, solids handling, wear, and manufacturer-approved curve before release.</div>
+      <div class="result-note"><strong>Material:</strong> ${matRec}</div>
       <div class="table-scroll-wrap"><table class="table">
         <thead><tr><th>Pump</th><th>Rotor</th><th>Op Flow</th><th>Op Head</th><th>Eff</th><th>Motor HP</th><th>Score</th></tr></thead>
         <tbody>${topRows}</tbody>
@@ -970,6 +1040,21 @@ els.useDefaultLibraryBtn.addEventListener('click', () => {
 });
 els.showLibraryToolsBtn.addEventListener('click', () => { if (els.libraryToolsPanel) els.libraryToolsPanel.open = true; els.libraryToolsPanel?.scrollIntoView({ behavior: 'smooth', block: 'start' }); });
 els.calcTdhBtn.addEventListener('click', () => { calcTdh(); queueAutoRecommend('TDH calculated'); });
+$('calcProductionBtn')?.addEventListener('click', calcProductionRate);
+$('fluidPreset')?.addEventListener('change', e => {
+  const preset = fluidPresets[e.target.value];
+  if (!preset) return;
+  $('specificGravity').value = preset.sg;
+  $('viscosity').value = preset.viscosity;
+  $('fluidTemp').value = preset.temp;
+  const spMirror = $('viscositySelfPrimeMirror');
+  const subMirror = $('viscositySubMirror');
+  if (spMirror) spMirror.value = preset.viscosity;
+  if (subMirror) subMirror.value = preset.viscosity;
+  validateCoreInputs();
+  updateWorkflowGuidance();
+  queueAutoRecommend('fluid preset');
+});
 // If head field is clicked while empty, hint the TDH calculator
 $('headValue')?.addEventListener('focus', () => {
   const val = $('headValue').value;

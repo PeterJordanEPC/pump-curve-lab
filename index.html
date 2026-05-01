@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Pump Curve Lab</title>
-  <link rel="stylesheet" href="styles.css?v=20260501n" />
+  <link rel="stylesheet" href="styles.css?v=20260501p" />
 </head>
 <body>
   <header class="hero">
@@ -118,6 +118,28 @@
           </div>
         </div>
 
+        <details class="advanced-panel" id="productionCalcPanel">
+          <summary>📊 Production rate calculator</summary>
+          <div class="inside-panel">
+            <p class="muted">Calculate required flow rate from project quantity and pumping hours.</p>
+            <div class="grid three">
+              <label>Total Project Quantity (yd³)
+                <input type="number" id="projectQuantity" value="" step="any" min="0" placeholder="e.g. 5000" />
+              </label>
+              <label>Pumping Hours
+                <input type="number" id="pumpingHours" value="" step="any" min="0.1" placeholder="e.g. 40" />
+              </label>
+              <label>Solids Concentration (%)
+                <input type="number" id="productionSolidsPct" value="30" step="1" min="1" max="100" />
+              </label>
+            </div>
+            <div class="actions inline-actions inside-panel no-top-pad">
+              <button type="button" id="calcProductionBtn">Calculate required GPM</button>
+            </div>
+            <div id="productionResult" class="muted" style="margin-top:10px"></div>
+          </div>
+        </details>
+
         <div id="workflowGuidance" class="notice"></div>
 
         <details class="advanced-panel" id="tdhCalcPanel">
@@ -153,6 +175,22 @@
         <details class="advanced-panel" id="slurryPanel">
           <summary>🧪 Slurry & material properties</summary>
           <div id="commonFluidInputs" class="grid three inside-panel">
+            <label>Common Fluid Preset
+              <select id="fluidPreset">
+                <option value="custom">Custom / Manual Entry</option>
+                <option value="water">Water (SG 1.0, 1 cP)</option>
+                <option value="sand_seawater">Sand &amp; Seawater (SG 2.65, 1.1 cP)</option>
+                <option value="pond_silt">Pond Silt (SG 1.60, 10 cP)</option>
+                <option value="clay_homogenized">Clay Homogenized (SG 1.44, 1000 cP)</option>
+                <option value="clay_cuttings">Clay Cuttings (SG 1.40, 10 cP)</option>
+                <option value="garnet_water">Garnet &amp; Water (SG 3.20, 1.1 cP)</option>
+                <option value="lime_slurry">Lime Slurry (SG 2.40, 250 cP)</option>
+                <option value="waste_water">Waste Water (SG 1.10, 1.1 cP)</option>
+                <option value="oil_sludge">Oil Sludge (SG 1.00, 200 cP)</option>
+                <option value="crude_oil">Crude Oil (SG 0.85, 660 cP)</option>
+                <option value="oil_drill_cuttings">Oil Drill Cuttings (SG 1.80, 25 cP)</option>
+              </select>
+            </label>
             <label>Solids Size (in)
               <input type="number" id="solidsSize" value="0.5" step="0.1" min="0" />
             </label>
@@ -319,6 +357,6 @@
     </section>
   </main>
 
-  <script src="app.js?v=20260501n"></script>
+  <script src="app.js?v=20260501p"></script>
 </body>
 </html>
