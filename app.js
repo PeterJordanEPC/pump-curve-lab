@@ -183,6 +183,39 @@ function updateWorkflowGuidance() {
   if (checklist) checklist.innerHTML = `<strong>${mode.title} checklist:</strong><ul>${mode.checklist.map(n => `<li>${n}</li>`).join('')}</ul>`;
 }
 
+
+function getModeAdjustedHead(ctx) {
+  let adjusted = ctx.adjustedHeadFt;
+  if (ctx.workflowMode === 'selfpriming') {
+    adjusted += ctx.suctionLift * 0.9;
+    adjusted += Math.max(0, ctx.suctionHoseLength - 100) * 0.03;
+    adjusted -= ctx.tankSurfacePressure * 1.5;
+  }
+  if (ctx.workflowMode === 'submersible') {
+    adjusted += Math.max(0, 8 - ctx.submergenceDepth) * 1.5;
+  }
+  return Math.max(adjusted, 0);
+}
+
+function getModeWarnings(ctx, best) {
+  const warnings = [];
+  if (ctx.workflowMode === 'selfpriming') {
+    if (ctx.suctionLift > 18) warnings.push('Self-prime warning: suction lift is above the preferred 18 ft guideline.');
+    if (ctx.suctionLift >= 24) warnings.push('Self-prime danger: suction lift is near/above the practical hard limit around 24 ft.');
+    if (ctx.suctionHoseLength > 200) warnings.push('Self-prime warning: suction hose length is above the usual 150 to 200 ft practical range.');
+  }
+  if (ctx.workflowMode === 'electric') {
+    if (ctx.useVfd === 'yes' && ctx.targetRpm < 1800) warnings.push('Electric mode note: VFD / reduced RPM selected, motor sizing should be manually validated just like the PumpFlo workflow.');
+    if (best && best.recommendedMotorHp < best.powerHp * ctx.sg) warnings.push('Motor sizing warning: recommended motor is close to calculated pump power after SG adjustment.');
+  }
+  if (ctx.workflowMode === 'submersible') {
+    if (ctx.submergenceDepth < 8) warnings.push('Submersible warning: low submergence may affect cooling and stable operation.');
+    if (ctx.coolingMethod === 'flooded' && ctx.fluidTemp > 120) warnings.push('Submersible warning: higher fluid temperature may require cooling review.');
+    if (ctx.powerCableLength > 200) warnings.push('Submersible note: long power cable length should be checked for voltage drop.');
+  }
+  return warnings;
+}
+
 function calcTdh() {
   const staticHead = Number(document.getElementById('staticHead').value || 0);
   const pipeLength = Number(document.getElementById('pipeLength').value || 0);
@@ -227,7 +260,8 @@ function buildContext() {
   const powerCableLength = Number(document.getElementById('powerCableLength').value || 0);
   const fluidPenalty = 1 + Math.max(0, sg - 1) * 0.08 + Math.max(0, viscosity - 1) * 0.0015 + Math.max(0, solidsSize - 0.5) * 0.01;
   const adjustedHeadFt = targetHeadFt * fluidPenalty;
-  return { projectName: document.getElementById('projectName').value, projectRef: document.getElementById('projectRef').value, flowInput, flowUnit, headInput, headUnit, workflowMode, sg, viscosity, pumpType, serviceFactor, solidsSize, fluidTemp, materialPreference, motorFrequency, targetRpm, useVfd, suctionLift, suctionHoseLength, tankSurfacePressure, submergenceDepth, coolingMethod, powerCableLength, targetFlowGpm, targetHeadFt, adjustedHeadFt };
+  const base = { projectName: document.getElementById('projectName').value, projectRef: document.getElementById('projectRef').value, flowInput, flowUnit, headInput, headUnit, workflowMode, sg, viscosity, pumpType, serviceFactor, solidsSize, fluidTemp, materialPreference, motorFrequency, targetRpm, useVfd, suctionLift, suctionHoseLength, tankSurfacePressure, submergenceDepth, coolingMethod, powerCableLength, targetFlowGpm, targetHeadFt, adjustedHeadFt };
+  return { ...base, modeAdjustedHeadFt: getModeAdjustedHead(base) };
 }
 
 function recommend(e) {
@@ -238,24 +272,33 @@ function recommend(e) {
   const families = uniqueModels(rows).map(model => interpolateFamily(rows.filter(r => r.model === model), ctx.targetFlowGpm)).filter(Boolean);
   const scored = families.map(row => {
     const flowError = Math.abs(row.flowGpm - ctx.targetFlowGpm) / Math.max(ctx.targetFlowGpm, 1);
-    const headError = Math.abs(row.headFt - ctx.adjustedHeadFt) / Math.max(ctx.adjustedHeadFt, 1);
+    const headError = Math.abs(row.headFt - ctx.modeAdjustedHeadFt) / Math.max(ctx.modeAdjustedHeadFt, 1);
     const typePenalty = ctx.pumpType === 'selfpriming' ? 0.05 : ctx.pumpType === 'submersible' ? 0.02 : 0;
     const modePenalty = ctx.workflowMode === 'selfpriming' ? 0.03 : ctx.workflowMode === 'submersible' ? 0.01 : 0;
     const solidsPenalty = Math.max(0, ctx.solidsSize - 1) * 0.01;
     const materialPenalty = ctx.materialPreference === 'abrasive' ? 0.01 : ctx.materialPreference === 'corrosive' ? 0.02 : 0;
-    const score = 100 - ((flowError * 65) + (headError * 35) + ((typePenalty + modePenalty + solidsPenalty + materialPenalty) * 100));
-    const recommendedMotorHp = Math.ceil((row.powerHp * ctx.sg * ctx.serviceFactor) / 5) * 5;
+    const selfPrimePenalty = ctx.workflowMode === 'selfpriming' ? Math.max(0, ctx.suctionLift - 18) * 0.004 + Math.max(0, ctx.suctionHoseLength - 150) * 0.0008 : 0;
+    const submersiblePenalty = ctx.workflowMode === 'submersible' ? Math.max(0, 8 - ctx.submergenceDepth) * 0.01 : 0;
+    const score = 100 - ((flowError * 65) + (headError * 35) + ((typePenalty + modePenalty + solidsPenalty + materialPenalty + selfPrimePenalty + submersiblePenalty) * 100));
+    let recommendedMotorHp = Math.ceil((row.powerHp * ctx.sg * ctx.serviceFactor) / 5) * 5;
+    if (ctx.workflowMode === 'electric' && ctx.useVfd === 'yes' && ctx.targetRpm < 1800) {
+      const rpmRatio = Math.max(ctx.targetRpm, 600) / 1800;
+      const adjustedMotorNeed = row.powerHp * ctx.sg * ctx.serviceFactor * (0.75 + rpmRatio * 0.25);
+      recommendedMotorHp = Math.ceil(adjustedMotorNeed / 5) * 5;
+    }
     return { ...row, score, recommendedMotorHp, flowErrorPct: flowError * 100, headErrorPct: headError * 100 };
   }).sort((a,b) => b.score - a.score);
+  const best = scored[0];
   lastRecommendation = { 
     ...ctx,
-    best: scored[0],
+    best,
     scored,
     libraryCount: rows.length,
     modelCount: uniqueModels(rows).length,
-    generalRecommendation: getGeneralPumpRecommendation(ctx.targetFlowGpm, ctx.adjustedHeadFt),
+    generalRecommendation: getGeneralPumpRecommendation(ctx.targetFlowGpm, ctx.modeAdjustedHeadFt),
     avoidFiveInPump: avoidFiveInPumpNote(),
     workflowNotes: getWorkflowGuidance(ctx),
+    modeWarnings: getModeWarnings(ctx, best),
   };
   renderRecommendation();
   drawChart();
@@ -266,6 +309,7 @@ function renderRecommendation() {
   els.summaryCards.innerHTML = `
     <div class="tile"><div class="k">Target Flow</div><div class="v">${r.targetFlowGpm.toFixed(0)} gpm</div></div>
     <div class="tile"><div class="k">Adjusted TDH</div><div class="v">${r.adjustedHeadFt.toFixed(1)} ft</div></div>
+    <div class="tile"><div class="k">Mode Adjusted TDH</div><div class="v">${r.modeAdjustedHeadFt.toFixed(1)} ft</div></div>
     <div class="tile"><div class="k">Curve-Based Recommendation</div><div class="v">${best.model}</div></div>
     <div class="tile"><div class="k">Recommended Motor</div><div class="v">${best.recommendedMotorHp} HP</div></div>
     <div class="tile"><div class="k">General Recommendation</div><div class="v">${r.generalRecommendation}</div></div>
@@ -288,6 +332,7 @@ function renderRecommendation() {
     <p><strong>Workflow mode:</strong> ${getModeConfig(r.workflowMode).title}</p>
     <p><strong>General recommendation:</strong> ${r.generalRecommendation}</p>
     <p><strong>Curve-based recommendation:</strong> ${best.model}</p>
+    <p><strong>Mode-adjusted TDH:</strong> ${r.modeAdjustedHeadFt.toFixed(1)} ft</p>
     <p><strong>Why:</strong> The general recommendation follows your size-band rules. The curve-based recommendation is the best interpolated family match for target flow, adjusted head, fluid penalty, pump type, and motor service factor.</p>
     <p><strong>Recommended motor:</strong> ${best.recommendedMotorHp} HP minimum, based on ${best.powerHp.toFixed(1)} pump HP × SG ${r.sg.toFixed(2)} × service factor ${r.serviceFactor.toFixed(2)}.</p>
     <p><strong>Rule reminder:</strong> ${r.avoidFiveInPump}</p>

@@ -111,3 +111,10 @@ Open:
 - Electric Process now shows frequency, RPM, and VFD inputs
 - Self-Priming now shows suction lift, suction hose length, and tank surface pressure
 - Submersible now shows submergence depth, cooling method, and cable length
+
+
+## Deeper mode-aware logic now included
+- self-prime mode adds suction-lift and suction-hose penalties into scoring and warnings
+- electric mode now reflects VFD / reduced-RPM motor-sizing caution more directly
+- submersible mode now adds submergence, cooling, and cable-length warnings
+- recommendation now shows both adjusted TDH and mode-adjusted TDH
