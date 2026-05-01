@@ -81,6 +81,27 @@ function interpolateFamily(modelRows, targetFlow) {
   };
 }
 
+
+function getGeneralPumpRecommendation(flowGpm, adjustedHeadFt) {
+  if (flowGpm >= 5 && flowGpm < 50) return '1-in Pump';
+  if (flowGpm >= 50 && flowGpm < 200) {
+    if (adjustedHeadFt > 120) return 'HH2000';
+    return '2-in Pump';
+  }
+  if (flowGpm >= 200 && flowGpm < 400) return '3-in Pump';
+  if (flowGpm >= 400 && flowGpm < 900) return '4-in Pump';
+  if (flowGpm >= 900 && flowGpm < 1600) return '6-in Pump';
+  if (flowGpm >= 1600 && flowGpm < 2500) return '8-in Pump';
+  if (flowGpm >= 2500 && flowGpm < 3500) return '10-in Pump';
+  if (flowGpm >= 3500 && flowGpm < 6000) return '12-in Pump';
+  if (flowGpm >= 6000 && flowGpm <= 12000) return '16-in Pump';
+  return 'Outside current general recommendation band';
+}
+
+function avoidFiveInPumpNote() {
+  return 'Avoid 5-in pump when making suggestions';
+}
+
 function calcTdh() {
   const staticHead = Number(document.getElementById('staticHead').value || 0);
   const pipeLength = Number(document.getElementById('pipeLength').value || 0);
@@ -134,7 +155,15 @@ function recommend(e) {
     const recommendedMotorHp = Math.ceil((row.powerHp * ctx.sg * ctx.serviceFactor) / 5) * 5;
     return { ...row, score, recommendedMotorHp, flowErrorPct: flowError * 100, headErrorPct: headError * 100 };
   }).sort((a,b) => b.score - a.score);
-  lastRecommendation = { ...ctx, best: scored[0], scored, libraryCount: rows.length, modelCount: uniqueModels(rows).length };
+  lastRecommendation = { 
+    ...ctx,
+    best: scored[0],
+    scored,
+    libraryCount: rows.length,
+    modelCount: uniqueModels(rows).length,
+    generalRecommendation: getGeneralPumpRecommendation(ctx.targetFlowGpm, ctx.adjustedHeadFt),
+    avoidFiveInPump: avoidFiveInPumpNote(),
+  };
   renderRecommendation();
   drawChart();
 }
@@ -145,7 +174,9 @@ function renderRecommendation() {
     <div class="tile"><div class="k">Target Flow</div><div class="v">${r.targetFlowGpm.toFixed(0)} gpm</div></div>
     <div class="tile"><div class="k">Adjusted TDH</div><div class="v">${r.adjustedHeadFt.toFixed(1)} ft</div></div>
     <div class="tile"><div class="k">Best Pump</div><div class="v">${best.model}</div></div>
-    <div class="tile"><div class="k">Recommended Motor</div><div class="v">${best.recommendedMotorHp} HP</div></div>`;
+    <div class="tile"><div class="k">Recommended Motor</div><div class="v">${best.recommendedMotorHp} HP</div></div>
+    <div class="tile"><div class="k">General Size Band</div><div class="v">${r.generalRecommendation}</div></div>
+    <div class="tile"><div class="k">Sizing Rule</div><div class="v">${r.avoidFiveInPump}</div></div>`;
   const rows = r.scored.slice(0, 8).map((row, idx) => `
     <tr>
       <td>${idx === 0 ? '<span class="badge">Best Fit</span> ' : ''}${row.model}</td>
@@ -161,8 +192,10 @@ function renderRecommendation() {
     <h3>${best.model} recommended</h3>
     <div class="notice">Prototype output only. Final engineering release should still confirm NPSH, solids handling, wear, and manufacturer-approved curve suitability.</div>
     <p><strong>Project:</strong> ${r.projectName} <br><strong>Reference:</strong> ${r.projectRef}</p>
+    <p><strong>General recommendation band:</strong> ${r.generalRecommendation}</p>
     <p><strong>Why:</strong> Best interpolated family match for target flow, adjusted head, fluid penalty, pump type, and motor service factor.</p>
     <p><strong>Recommended motor:</strong> ${best.recommendedMotorHp} HP minimum, based on ${best.powerHp.toFixed(1)} pump HP × SG ${r.sg.toFixed(2)} × service factor ${r.serviceFactor.toFixed(2)}.</p>
+    <p><strong>Rule reminder:</strong> ${r.avoidFiveInPump}</p>
     <p><strong>Updated curve note:</strong> The plotted operating point includes a fluid-adjusted head penalty for specific gravity, viscosity, and solids burden.</p>
     <table class="table">
       <thead><tr><th>Pump</th><th>Rotor</th><th>Flow gpm</th><th>Head ft</th><th>Pump HP</th><th>Motor HP</th><th>Score</th></tr></thead>
