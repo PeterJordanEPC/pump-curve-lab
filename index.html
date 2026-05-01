@@ -4,13 +4,19 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Pump Curve Lab</title>
-  <link rel="stylesheet" href="styles.css?v=20260501b" />
+  <link rel="stylesheet" href="styles.css?v=20260501c" />
 </head>
 <body>
   <header class="hero">
-    <div>
+    <div class="hero-copy">
+      <span class="eyebrow">Pump recommendation workflow</span>
       <h1>Pump Curve Lab</h1>
-      <p>Upload pump curves, calculate TDH, account for fluid properties, compare multiple pump families, and generate a best-fit pump and motor recommendation with an updated operating curve.</p>
+      <p>Enter the project details, let the app calculate the duty point, then get a recommended pump and updated operating curve.</p>
+      <div class="hero-chips">
+        <span class="chip">1. Enter project details</span>
+        <span class="chip">2. Recommend pump</span>
+        <span class="chip">3. Export curve and datasheet</span>
+      </div>
     </div>
     <div class="hero-actions">
       <button id="loadSampleBtn">Load sample curves</button>
@@ -21,213 +27,257 @@
     </div>
   </header>
 
-  <main class="layout">
-    <section class="card form-card">
-      <h2>1. Application inputs</h2>
+  <main class="layout streamlined-layout">
+    <section class="card form-card main-form-card">
+      <div class="section-head">
+        <div>
+          <h2>Project details</h2>
+          <p>Keep the front end simple. Start with the job details and required duty point, then add extra engineering inputs only if needed.</p>
+        </div>
+        <div class="pill">Main input flow</div>
+      </div>
+
       <form id="appForm">
-        <div class="grid two">
-          <label>Project Name
-            <input type="text" id="projectName" value="Pump Curve Review" />
-          </label>
-          <label>Customer / Project Ref
-            <input type="text" id="projectRef" value="Internal Test" />
-          </label>
-          <label>Flow Rate
-            <input type="number" id="flowRate" value="2200" step="any" min="0" />
-          </label>
-          <label>Flow Unit
-            <select id="flowUnit">
-              <option value="gpm">US gpm</option>
-              <option value="m3h">m³/h</option>
-              <option value="lps">L/s</option>
-            </select>
-          </label>
-          <label>Head / Pressure Value
-            <input type="number" id="headValue" value="30" step="any" min="0" />
-          </label>
-          <label>Head Unit
-            <select id="headUnit">
-              <option value="ft">ft TDH</option>
-              <option value="m">m TDH</option>
-              <option value="psi">psi</option>
-              <option value="bar">bar</option>
-            </select>
-          </label>
+        <div class="form-section">
+          <h3>Project + duty point</h3>
+          <div class="grid two">
+            <label>Project Name
+              <input type="text" id="projectName" value="Pump Curve Review" placeholder="Customer or project name" />
+            </label>
+            <label>Customer / Project Ref
+              <input type="text" id="projectRef" value="Internal Test" placeholder="Quote, job, or internal reference" />
+            </label>
+            <label>Flow Rate
+              <input type="number" id="flowRate" value="2200" step="any" min="0" />
+            </label>
+            <label>Flow Unit
+              <select id="flowUnit">
+                <option value="gpm">US gpm</option>
+                <option value="m3h">m³/h</option>
+                <option value="lps">L/s</option>
+              </select>
+            </label>
+            <label>Head / Pressure Value
+              <input type="number" id="headValue" value="30" step="any" min="0" />
+            </label>
+            <label>Head Unit
+              <select id="headUnit">
+                <option value="ft">ft TDH</option>
+                <option value="m">m TDH</option>
+                <option value="psi">psi</option>
+                <option value="bar">bar</option>
+              </select>
+            </label>
+          </div>
         </div>
 
-        <div class="grid three">
-          <label>Workflow Mode
-            <select id="workflowMode">
-              <option value="electric">Electric Process</option>
-              <option value="selfpriming">Self-Priming</option>
-              <option value="submersible">Submersible</option>
-            </select>
-          </label>
-          <label>Pump Type
-            <select id="pumpType">
-              <option value="submersible">Submersible</option>
-              <option value="flooded">Flooded Suction</option>
-              <option value="selfpriming">Self-Priming</option>
-            </select>
-          </label>
-          <label>Specific Gravity
-            <input type="number" id="specificGravity" value="1" step="0.01" min="0.1" />
-          </label>
-          <label>Viscosity (cP)
-            <input type="number" id="viscosity" value="1" step="0.1" min="0.1" />
-          </label>
+        <div class="form-section compact-mode-row">
+          <div class="grid three">
+            <label>Workflow Mode
+              <select id="workflowMode">
+                <option value="electric">Electric Process</option>
+                <option value="selfpriming">Self-Priming</option>
+                <option value="submersible">Submersible</option>
+              </select>
+            </label>
+            <label>Pump Type
+              <select id="pumpType">
+                <option value="submersible">Submersible</option>
+                <option value="flooded">Flooded Suction</option>
+                <option value="selfpriming">Self-Priming</option>
+              </select>
+            </label>
+            <label>Specific Gravity
+              <input type="number" id="specificGravity" value="1" step="0.01" min="0.1" />
+            </label>
+            <label>Viscosity (cP)
+              <input type="number" id="viscosity" value="1" step="0.1" min="0.1" />
+            </label>
+          </div>
         </div>
 
-        <div id="commonHydraulicInputs" class="grid three">
-          <label>Static Lift / Head
-            <input type="number" id="staticHead" value="30" step="any" min="0" />
-          </label>
-          <label>Pipe Length
-            <input type="number" id="pipeLength" value="45" step="any" min="0" />
-          </label>
-          <label>Pipe Diameter (in)
-            <input type="number" id="pipeDiameter" value="6" step="any" min="0.25" />
-          </label>
-          <label>Elevation Above Sea Level (ft)
-            <input type="number" id="elevationFt" value="0" step="any" min="0" />
-          </label>
-        </div>
+        <div id="workflowGuidance" class="notice"></div>
 
-        <div id="commonDesignInputs" class="grid three">
-          <label>Atmospheric Pressure (psi)
-            <input type="number" id="atmosphericPressure" value="14.7" step="0.1" min="0" />
-          </label>
-          <label>Pipe Roughness C-factor / quality
-            <input type="number" id="pipeFactor" value="140" step="1" min="1" />
-          </label>
-          <label>Fittings Count (eq elbows)
-            <input type="number" id="fittingsCount" value="2" step="1" min="0" />
-          </label>
-          <label>Motor Service Factor
-            <input type="number" id="motorServiceFactor" value="1.15" step="0.01" min="1" />
-          </label>
-        </div>
+        <details class="advanced-panel" open>
+          <summary>Hydraulic inputs</summary>
+          <div id="commonHydraulicInputs" class="grid three inside-panel">
+            <label>Static Lift / Head
+              <input type="number" id="staticHead" value="30" step="any" min="0" />
+            </label>
+            <label>Pipe Length
+              <input type="number" id="pipeLength" value="45" step="any" min="0" />
+            </label>
+            <label>Pipe Diameter (in)
+              <input type="number" id="pipeDiameter" value="6" step="any" min="0.25" />
+            </label>
+            <label>Elevation Above Sea Level (ft)
+              <input type="number" id="elevationFt" value="0" step="any" min="0" />
+            </label>
+            <label>Atmospheric Pressure (psi)
+              <input type="number" id="atmosphericPressure" value="14.7" step="0.1" min="0" />
+            </label>
+            <label>Pipe Roughness C-factor / quality
+              <input type="number" id="pipeFactor" value="140" step="1" min="1" />
+            </label>
+            <label>Fittings Count (eq elbows)
+              <input type="number" id="fittingsCount" value="2" step="1" min="0" />
+            </label>
+          </div>
+          <div class="actions inline-actions">
+            <button type="button" id="calcTdhBtn">Calculate TDH from pipe variables</button>
+          </div>
+        </details>
 
-        <div id="commonFluidInputs" class="grid three">
-          <label>Solids Size (in)
-            <input type="number" id="solidsSize" value="0.5" step="0.1" min="0" />
-          </label>
-          <label>Fluid Temperature (°F)
-            <input type="number" id="fluidTemp" value="70" step="1" />
-          </label>
-          <label>Material Preference
-            <select id="materialPreference">
-              <option value="standard">Standard</option>
-              <option value="abrasive">Abrasive / wear resistant</option>
-              <option value="corrosive">Corrosive / upgraded materials</option>
-            </select>
-          </label>
-        </div>
+        <details class="advanced-panel">
+          <summary>Fluid and material details</summary>
+          <div id="commonFluidInputs" class="grid three inside-panel">
+            <label>Solids Size (in)
+              <input type="number" id="solidsSize" value="0.5" step="0.1" min="0" />
+            </label>
+            <label>Fluid Temperature (°F)
+              <input type="number" id="fluidTemp" value="70" step="1" />
+            </label>
+            <label>Material Preference
+              <select id="materialPreference">
+                <option value="standard">Standard</option>
+                <option value="abrasive">Abrasive / wear resistant</option>
+                <option value="corrosive">Corrosive / upgraded materials</option>
+              </select>
+            </label>
+            <label>Percent Solids by Weight
+              <input type="number" id="percentSolidsByWeight" value="50" step="1" min="0" max="100" />
+            </label>
+          </div>
+        </details>
 
-        <div class="grid three">
-          <label>Percent Solids by Weight
-            <input type="number" id="percentSolidsByWeight" value="50" step="1" min="0" max="100" />
-          </label>
-          <label>Available Customer Motor HP
-            <input type="number" id="availableMotorHp" value="0" step="1" min="0" />
-          </label>
-          <label>Motor Voltage
-            <select id="motorVoltage">
-              <option value="460">460 V</option>
-              <option value="230">230 V</option>
-              <option value="575">575 V</option>
-              <option value="other">Other</option>
-            </select>
-          </label>
-        </div>
+        <details class="advanced-panel">
+          <summary>Motor and engineering details</summary>
+          <div id="commonDesignInputs" class="grid three inside-panel">
+            <label>Motor Service Factor
+              <input type="number" id="motorServiceFactor" value="1.15" step="0.01" min="1" />
+            </label>
+            <label>Available Customer Motor HP
+              <input type="number" id="availableMotorHp" value="0" step="1" min="0" />
+            </label>
+            <label>Motor Voltage
+              <select id="motorVoltage">
+                <option value="460">460 V</option>
+                <option value="230">230 V</option>
+                <option value="575">575 V</option>
+                <option value="other">Other</option>
+              </select>
+            </label>
+          </div>
 
-        <div id="electricModeFields" class="grid three mode-group">
-          <label>Base Motor Frequency
-            <select id="motorFrequency">
-              <option value="60">60 Hz</option>
-              <option value="50">50 Hz</option>
-            </select>
-          </label>
-          <label>Target Operating RPM
-            <input type="number" id="targetRpm" value="1400" step="1" min="100" />
-          </label>
-          <label>Use VFD?
-            <select id="useVfd">
-              <option value="yes">Yes</option>
-              <option value="no">No</option>
-            </select>
-          </label>
-        </div>
+          <div id="electricModeFields" class="grid three mode-group inside-panel">
+            <label>Base Motor Frequency
+              <select id="motorFrequency">
+                <option value="60">60 Hz</option>
+                <option value="50">50 Hz</option>
+              </select>
+            </label>
+            <label>Target Operating RPM
+              <input type="number" id="targetRpm" value="1400" step="1" min="100" />
+            </label>
+            <label>Use VFD?
+              <select id="useVfd">
+                <option value="yes">Yes</option>
+                <option value="no">No</option>
+              </select>
+            </label>
+          </div>
 
-        <div id="selfPrimingModeFields" class="grid three mode-group hidden">
-          <label>Suction Lift (ft)
-            <input type="number" id="suctionLift" value="16" step="any" min="0" />
-          </label>
-          <label>Suction Hose Length (ft)
-            <input type="number" id="suctionHoseLength" value="100" step="any" min="0" />
-          </label>
-          <label>Tank Surface Pressure (psi)
-            <input type="number" id="tankSurfacePressure" value="1" step="any" />
-          </label>
-        </div>
+          <div id="selfPrimingModeFields" class="grid three mode-group hidden inside-panel">
+            <label>Suction Lift (ft)
+              <input type="number" id="suctionLift" value="16" step="any" min="0" />
+            </label>
+            <label>Suction Hose Length (ft)
+              <input type="number" id="suctionHoseLength" value="100" step="any" min="0" />
+            </label>
+            <label>Tank Surface Pressure (psi)
+              <input type="number" id="tankSurfacePressure" value="1" step="any" />
+            </label>
+          </div>
 
-        <div id="submersibleModeFields" class="grid three mode-group hidden">
-          <label>Submergence Depth (ft)
-            <input type="number" id="submergenceDepth" value="10" step="any" min="0" />
-          </label>
-          <label>Motor Cooling Method
-            <select id="coolingMethod">
-              <option value="flooded">Flooded / ambient</option>
-              <option value="jacketed">Cooling jacket</option>
-            </select>
-          </label>
-          <label>Power Cable Length (ft)
-            <input type="number" id="powerCableLength" value="50" step="any" min="0" />
-          </label>
-        </div>
+          <div id="submersibleModeFields" class="grid three mode-group hidden inside-panel">
+            <label>Submergence Depth (ft)
+              <input type="number" id="submergenceDepth" value="10" step="any" min="0" />
+            </label>
+            <label>Motor Cooling Method
+              <select id="coolingMethod">
+                <option value="flooded">Flooded / ambient</option>
+                <option value="jacketed">Cooling jacket</option>
+              </select>
+            </label>
+            <label>Power Cable Length (ft)
+              <input type="number" id="powerCableLength" value="50" step="any" min="0" />
+            </label>
+          </div>
+        </details>
 
-        <div id="workflowGuidance" class="notice"></div><div id="modeChecklist" class="notice"></div>
-        <div class="actions">
-          <button type="button" id="calcTdhBtn">Calculate TDH from pipe variables</button>
+        <details class="advanced-panel">
+          <summary>Curve library</summary>
+          <div class="inside-panel">
+            <p class="muted top-gap-sm">Upload one or more CSV files with columns like: <code>MODEL,ROTOR,FLOW_GPM,HEAD_FT,EFFICIENCY_PCT,POWER_HP</code></p>
+            <input type="file" id="curveFile" accept=".csv" multiple />
+            <div class="inline-tools top-gap-sm">
+              <label>Filter family / model
+                <select id="familyFilter"><option value="all">All loaded models</option></select>
+              </label>
+            </div>
+            <div id="libraryStats" class="muted">No curves loaded yet.</div>
+            <details class="preview-panel">
+              <summary>Preview loaded curve rows</summary>
+              <div id="curveTableWrap"></div>
+            </details>
+          </div>
+        </details>
+
+        <div id="modeChecklist" class="notice subtle-notice"></div>
+
+        <div class="actions primary-actions sticky-actions">
           <button type="submit">Recommend pump</button>
-          <button type="button" id="exportJsonBtn">Export JSON</button>
-          <button type="button" id="exportCsvBtn">Export CSV</button>
           <button type="button" id="exportHtmlBtn">Export HTML report</button>
+          <button type="button" id="exportCsvBtn">Export CSV</button>
+          <button type="button" id="exportJsonBtn">Export JSON</button>
         </div>
       </form>
     </section>
 
-    <section class="card upload-card">
-      <h2>2. Pump curve library</h2>
-      <p>Upload one or more CSV files with columns like: <code>MODEL,ROTOR,FLOW_GPM,HEAD_FT,EFFICIENCY_PCT,POWER_HP</code></p>
-      <input type="file" id="curveFile" accept=".csv" multiple />
-      <div class="inline-tools">
-        <label>Filter family / model
-          <select id="familyFilter"><option value="all">All loaded models</option></select>
-        </label>
+    <section class="card recommendation-card result-card">
+      <div class="section-head">
+        <div>
+          <h2>Recommendation</h2>
+          <p>The goal is simple: recommend the best fit pump and show the updated curve clearly.</p>
+        </div>
+        <div class="pill success-pill">Live result</div>
       </div>
-      <div id="libraryStats" class="muted">No curves loaded yet.</div>
-      <div id="curveTableWrap"></div>
-    </section>
-
-    <section class="card recommendation-card">
-      <h2>3. Recommendation</h2>
       <div id="summaryCards" class="summary-grid"></div>
       <div id="recommendationBox" class="recommendation empty">Run a recommendation to see results.</div>
     </section>
 
-    <section class="card comparison-card">
-      <h2>4. Top pump comparison</h2>
-      <div id="comparisonWrap" class="recommendation empty">Top recommendations will appear here.</div>
-    </section>
-
     <section class="card chart-card full">
-      <h2>5. Updated operating curve</h2>
+      <div class="section-head">
+        <div>
+          <h2>Updated operating curve</h2>
+          <p>See the requested duty point against the recommended operating point.</p>
+        </div>
+      </div>
       <svg id="curveChart" viewBox="0 0 900 420" role="img" aria-label="Pump curve chart"></svg>
       <div id="chartLegend" class="legend"></div>
     </section>
+
+    <section class="card comparison-card full">
+      <div class="section-head">
+        <div>
+          <h2>Top pump comparison</h2>
+          <p>Useful for internal review without crowding the main recommendation.</p>
+        </div>
+      </div>
+      <div id="comparisonWrap" class="recommendation empty">Top recommendations will appear here.</div>
+    </section>
   </main>
 
-  <script src="app.js?v=20260501b"></script>
+  <script src="app.js?v=20260501c"></script>
 </body>
 </html>

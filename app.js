@@ -281,6 +281,9 @@ function buildContext() {
   const solidsSize = Number(document.getElementById('solidsSize').value || 0);
   const fluidTemp = Number(document.getElementById('fluidTemp').value || 70);
   const materialPreference = document.getElementById('materialPreference').value;
+  const percentSolidsByWeight = Number(document.getElementById('percentSolidsByWeight').value || 0);
+  const availableMotorHp = Number(document.getElementById('availableMotorHp').value || 0);
+  const motorVoltage = document.getElementById('motorVoltage').value;
   const targetFlowGpm = toGpm(flowInput, flowUnit);
   const targetHeadFt = toFeetHead(headInput, headUnit, sg);
   const motorFrequency = Number(document.getElementById('motorFrequency').value || 60);
