@@ -105,3 +105,9 @@ Open:
 - Electric Process: customer flow, TDH, slurry properties, and manual motor validation focus
 - Self-Priming: suction-lift-first workflow with lift and suction hose warnings
 - Submersible: flooded-service style workflow with submergence/cooling reminder notes
+
+
+## Mode-specific form behavior
+- Electric Process now shows frequency, RPM, and VFD inputs
+- Self-Priming now shows suction lift, suction hose length, and tank surface pressure
+- Submersible now shows submergence depth, cooling method, and cable length

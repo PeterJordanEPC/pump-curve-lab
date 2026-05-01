@@ -25,7 +25,7 @@ const els = {
   appForm: document.getElementById('appForm'),
   familyFilter: document.getElementById('familyFilter'),
 };
-const fieldIds = ['projectName','projectRef','flowRate','flowUnit','headValue','headUnit','workflowMode','pumpType','specificGravity','viscosity','staticHead','pipeLength','pipeDiameter','pipeFactor','fittingsCount','motorServiceFactor','solidsSize','fluidTemp','materialPreference'];
+const fieldIds = ['projectName','projectRef','flowRate','flowUnit','headValue','headUnit','workflowMode','pumpType','specificGravity','viscosity','staticHead','pipeLength','pipeDiameter','pipeFactor','fittingsCount','motorServiceFactor','solidsSize','fluidTemp','materialPreference','motorFrequency','targetRpm','useVfd','suctionLift','suctionHoseLength','tankSurfacePressure','submergenceDepth','coolingMethod','powerCableLength'];
 
 function parseCsv(text, sourceName='uploaded') {
   const lines = text.trim().split(/\r?\n/).filter(Boolean);
@@ -104,6 +104,24 @@ function avoidFiveInPumpNote() {
 
 
 
+
+function applyWorkflowModeUI() {
+  const mode = document.getElementById('workflowMode').value;
+  const electric = document.getElementById('electricModeFields');
+  const selfp = document.getElementById('selfPrimingModeFields');
+  const subm = document.getElementById('submersibleModeFields');
+  if (electric) electric.classList.toggle('hidden', mode !== 'electric');
+  if (selfp) selfp.classList.toggle('hidden', mode !== 'selfpriming');
+  if (subm) subm.classList.toggle('hidden', mode !== 'submersible');
+
+  const pumpType = document.getElementById('pumpType');
+  if (pumpType) {
+    if (mode === 'selfpriming') pumpType.value = 'selfpriming';
+    if (mode === 'submersible') pumpType.value = 'submersible';
+    if (mode === 'electric' && pumpType.value === 'selfpriming') pumpType.value = 'flooded';
+  }
+}
+
 function getModeConfig(mode) {
   if (mode === 'selfpriming') {
     return {
@@ -156,6 +174,7 @@ function getWorkflowGuidance(ctx) {
 
 function updateWorkflowGuidance() {
   const ctx = buildContext();
+  applyWorkflowModeUI();
   const notes = getWorkflowGuidance(ctx);
   const mode = getModeConfig(ctx.workflowMode);
   const box = document.getElementById('workflowGuidance');
@@ -197,9 +216,18 @@ function buildContext() {
   const materialPreference = document.getElementById('materialPreference').value;
   const targetFlowGpm = toGpm(flowInput, flowUnit);
   const targetHeadFt = toFeetHead(headInput, headUnit, sg);
+  const motorFrequency = Number(document.getElementById('motorFrequency').value || 60);
+  const targetRpm = Number(document.getElementById('targetRpm').value || 1400);
+  const useVfd = document.getElementById('useVfd').value;
+  const suctionLift = Number(document.getElementById('suctionLift').value || 0);
+  const suctionHoseLength = Number(document.getElementById('suctionHoseLength').value || 0);
+  const tankSurfacePressure = Number(document.getElementById('tankSurfacePressure').value || 0);
+  const submergenceDepth = Number(document.getElementById('submergenceDepth').value || 0);
+  const coolingMethod = document.getElementById('coolingMethod').value;
+  const powerCableLength = Number(document.getElementById('powerCableLength').value || 0);
   const fluidPenalty = 1 + Math.max(0, sg - 1) * 0.08 + Math.max(0, viscosity - 1) * 0.0015 + Math.max(0, solidsSize - 0.5) * 0.01;
   const adjustedHeadFt = targetHeadFt * fluidPenalty;
-  return { projectName: document.getElementById('projectName').value, projectRef: document.getElementById('projectRef').value, flowInput, flowUnit, headInput, headUnit, workflowMode, sg, viscosity, pumpType, serviceFactor, solidsSize, fluidTemp, materialPreference, targetFlowGpm, targetHeadFt, adjustedHeadFt };
+  return { projectName: document.getElementById('projectName').value, projectRef: document.getElementById('projectRef').value, flowInput, flowUnit, headInput, headUnit, workflowMode, sg, viscosity, pumpType, serviceFactor, solidsSize, fluidTemp, materialPreference, motorFrequency, targetRpm, useVfd, suctionLift, suctionHoseLength, tankSurfacePressure, submergenceDepth, coolingMethod, powerCableLength, targetFlowGpm, targetHeadFt, adjustedHeadFt };
 }
 
 function recommend(e) {
@@ -327,6 +355,7 @@ els.loadProjectBtn.addEventListener('click', () => els.projectFile.click());
 els.projectFile.addEventListener('change', e => { const file = e.target.files[0]; if (file) loadProjectFile(file); });
 els.printBtn.addEventListener('click', () => window.print());
 els.familyFilter.addEventListener('change', () => recommend());
+document.getElementById('workflowMode').addEventListener('change', () => { applyWorkflowModeUI(); updateWorkflowGuidance(); });
 els.appForm.addEventListener('input', updateWorkflowGuidance);
 els.appForm.addEventListener('change', updateWorkflowGuidance);
 els.appForm.addEventListener('submit', recommend);
