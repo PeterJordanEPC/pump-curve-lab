@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Pump Curve Lab</title>
-  <link rel="stylesheet" href="styles.css?v=20260501c" />
+  <link rel="stylesheet" href="styles.css?v=20260501d" />
 </head>
 <body>
   <header class="hero">
@@ -15,11 +15,11 @@
       <div class="hero-chips">
         <span class="chip">1. Enter project details</span>
         <span class="chip">2. Recommend pump</span>
-        <span class="chip">3. Export curve and datasheet</span>
+        <span class="chip">3. Review curve and export</span>
       </div>
     </div>
     <div class="hero-actions">
-      <button id="loadSampleBtn">Load sample curves</button>
+      <button id="useDefaultLibraryBtn">Use default Eddy library</button>
       <button id="saveProjectBtn">Save project</button>
       <button id="loadProjectBtn">Load project</button>
       <input type="file" id="projectFile" accept=".json" hidden />
@@ -215,8 +215,16 @@
           </div>
         </details>
 
-        <details class="advanced-panel">
-          <summary>Curve library</summary>
+        <div class="card-lite default-library-banner">
+          <div>
+            <strong>Default Eddy curve library active</strong>
+            <p class="muted">Normal users can stay in the simple flow. Manual CSV uploads are still available under advanced library tools.</p>
+          </div>
+          <button type="button" id="showLibraryToolsBtn">Advanced library tools</button>
+        </div>
+
+        <details class="advanced-panel" id="libraryToolsPanel">
+          <summary>Advanced library tools</summary>
           <div class="inside-panel">
             <p class="muted top-gap-sm">Upload one or more CSV files with columns like: <code>MODEL,ROTOR,FLOW_GPM,HEAD_FT,EFFICIENCY_PCT,POWER_HP</code></p>
             <input type="file" id="curveFile" accept=".csv" multiple />
@@ -278,6 +286,6 @@
     </section>
   </main>
 
-  <script src="app.js?v=20260501c"></script>
+  <script src="app.js?v=20260501d"></script>
 </body>
 </html>

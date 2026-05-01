@@ -1,4 +1,4 @@
-const sampleCsv = `MODEL,ROTOR,FLOW_GPM,HEAD_FT,EFFICIENCY_PCT,POWER_HP\nHD5000,12 inch,1575,30.4,29,41.6\nHD4000,10 inch,1480,29.9,28,39.4\nHD8000,17 inch,2100,75,35,120\nHD8000,17 inch,2300,65,37,130\nHD6000,14 inch,1956,50.1,34,71.8\nHD2000,8 inch,607,45,22,18\nHD3000,9.5 inch,885,40,24,26`;
+const defaultLibraryCsv = `MODEL,ROTOR,FLOW_GPM,HEAD_FT,EFFICIENCY_PCT,POWER_HP\nHD5000,12 inch,1575,30.4,29,41.6\nHD4000,10 inch,1480,29.9,28,39.4\nHD8000,17 inch,2100,75,35,120\nHD8000,17 inch,2300,65,37,130\nHD6000,14 inch,1956,50.1,34,71.8\nHD2000,8 inch,607,45,22,18\nHD3000,9.5 inch,885,40,24,26`;
 
 let curveRows = [];
 let lastRecommendation = null;
@@ -14,7 +14,9 @@ const els = {
   comparisonWrap: document.getElementById('comparisonWrap'),
   curveChart: document.getElementById('curveChart'),
   chartLegend: document.getElementById('chartLegend'),
-  loadSampleBtn: document.getElementById('loadSampleBtn'),
+  useDefaultLibraryBtn: document.getElementById('useDefaultLibraryBtn'),
+  showLibraryToolsBtn: document.getElementById('showLibraryToolsBtn'),
+  libraryToolsPanel: document.getElementById('libraryToolsPanel'),
   calcTdhBtn: document.getElementById('calcTdhBtn'),
   exportJsonBtn: document.getElementById('exportJsonBtn'),
   exportCsvBtn: document.getElementById('exportCsvBtn'),
@@ -475,6 +477,8 @@ function renderLibrary() {
   const models = uniqueModels(curveRows).length;
   const sources = [...new Set(curveRows.map(r => r.source))].join(', ');
   els.libraryStats.textContent = `${curveRows.length} curve points loaded across ${models} models. Sources: ${sources}.`;
+  const banner = document.querySelector('.default-library-banner strong');
+  if (banner) banner.textContent = sources.includes('default-library') ? 'Default Eddy curve library active' : 'Custom curve library active';
   const preview = curveRows.slice(0, 12).map(r => `<tr><td>${r.model}</td><td>${r.source}</td><td>${r.rotor}</td><td>${r.flowGpm}</td><td>${r.headFt}</td><td>${r.efficiencyPct}</td><td>${r.powerHp}</td></tr>`).join('');
   els.curveTableWrap.innerHTML = `<table class="table"><thead><tr><th>Model</th><th>Source</th><th>Rotor</th><th>Flow gpm</th><th>Head ft</th><th>Eff %</th><th>Power HP</th></tr></thead><tbody>${preview}</tbody></table>`;
 }
@@ -485,7 +489,8 @@ function exportHtml() { if (!lastRecommendation) return alert('Run a recommendat
 function saveProject() { const payload = { project: getFormValues(), curvesCsv: buildCsv(curveRows) }; downloadFile(`${(document.getElementById('projectName').value || 'pump-project').replace(/\s+/g,'-').toLowerCase()}.json`, JSON.stringify(payload, null, 2), 'application/json'); }
 function loadProjectFile(file) { const reader = new FileReader(); reader.onload = () => { const payload = JSON.parse(reader.result); if (payload.project) setFormValues(payload.project); if (payload.curvesCsv) curveRows = parseCsv(payload.curvesCsv, 'project-load'); renderLibrary(); recommend(); }; reader.readAsText(file); }
 
-els.loadSampleBtn.addEventListener('click', () => { curveRows = parseCsv(sampleCsv, 'sample-library'); renderLibrary(); updateAtmosphericPressureFromElevation(); applyWorkflowModeUI(); updateWorkflowGuidance(); recommend(); });
+els.useDefaultLibraryBtn.addEventListener('click', () => { curveRows = parseCsv(defaultLibraryCsv, 'default-library'); renderLibrary(); updateAtmosphericPressureFromElevation(); applyWorkflowModeUI(); updateWorkflowGuidance(); recommend(); });
+els.showLibraryToolsBtn.addEventListener('click', () => { if (els.libraryToolsPanel) els.libraryToolsPanel.open = true; els.libraryToolsPanel?.scrollIntoView({ behavior: 'smooth', block: 'start' }); });
 els.calcTdhBtn.addEventListener('click', calcTdh);
 els.exportJsonBtn.addEventListener('click', exportJson);
 els.exportCsvBtn.addEventListener('click', exportCsv);
@@ -501,4 +506,4 @@ els.appForm.addEventListener('input', updateWorkflowGuidance);
 els.appForm.addEventListener('change', updateWorkflowGuidance);
 els.appForm.addEventListener('submit', recommend);
 els.curveFile.addEventListener('change', async (e) => { const files = [...e.target.files]; if (!files.length) return; const parsed = []; for (const file of files) parsed.push(...parseCsv(await file.text(), file.name)); curveRows = parsed; renderLibrary(); recommend(); });
-curveRows = parseCsv(sampleCsv, 'sample-library'); renderLibrary(); updateAtmosphericPressureFromElevation(); applyWorkflowModeUI(); updateWorkflowGuidance(); recommend();
+curveRows = parseCsv(defaultLibraryCsv, 'default-library'); renderLibrary(); updateAtmosphericPressureFromElevation(); applyWorkflowModeUI(); updateWorkflowGuidance(); recommend();
