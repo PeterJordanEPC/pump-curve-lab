@@ -25,7 +25,7 @@ const els = {
   appForm: document.getElementById('appForm'),
   familyFilter: document.getElementById('familyFilter'),
 };
-const fieldIds = ['projectName','projectRef','flowRate','flowUnit','headValue','headUnit','pumpType','specificGravity','viscosity','staticHead','pipeLength','pipeDiameter','pipeFactor','fittingsCount','motorServiceFactor','solidsSize','fluidTemp','materialPreference'];
+const fieldIds = ['projectName','projectRef','flowRate','flowUnit','headValue','headUnit','workflowMode','pumpType','specificGravity','viscosity','staticHead','pipeLength','pipeDiameter','pipeFactor','fittingsCount','motorServiceFactor','solidsSize','fluidTemp','materialPreference'];
 
 function parseCsv(text, sourceName='uploaded') {
   const lines = text.trim().split(/\r?\n/).filter(Boolean);
@@ -103,6 +103,40 @@ function avoidFiveInPumpNote() {
 }
 
 
+
+function getModeConfig(mode) {
+  if (mode === 'selfpriming') {
+    return {
+      title: 'Self-Priming',
+      checklist: [
+        'Use suction lift logic, not just discharge TDH.',
+        'Keep suction lift at or below 18 ft preferred.',
+        'Treat ~24 ft suction lift as a practical hard warning zone.',
+        'Watch suction hose length closely, roughly 150 to 200 ft max preferred.',
+        'If suction head available goes negative, treat as a design failure until proven otherwise.'
+      ]
+    };
+  }
+  if (mode === 'submersible') {
+    return {
+      title: 'Submersible',
+      checklist: [
+        'Assume flooded suction and focus on duty point, slurry properties, and motor loading.',
+        'Verify cable, cooling, and submergence constraints separately.',
+        'Check solids size and wear material suitability for submerged service.'
+      ]
+    };
+  }
+  return {
+    title: 'Electric Process',
+    checklist: [
+      'Start with customer flow, TDH, slurry properties, and operating frequency/RPM assumptions.',
+      'Use interpolated family match as a screening step, then manually validate motor sizing.',
+      'Prefer standard rotor sizes and avoid 5-in pumps unless strongly justified.'
+    ]
+  };
+}
+
 function getWorkflowGuidance(ctx) {
   const notes = [];
   if (ctx.pumpType === 'selfpriming') {
@@ -123,9 +157,11 @@ function getWorkflowGuidance(ctx) {
 function updateWorkflowGuidance() {
   const ctx = buildContext();
   const notes = getWorkflowGuidance(ctx);
+  const mode = getModeConfig(ctx.workflowMode);
   const box = document.getElementById('workflowGuidance');
-  if (!box) return;
-  box.innerHTML = '<strong>PumpFlo-style workflow guidance:</strong><ul>' + notes.map(n => `<li>${n}</li>`).join('') + '</ul>';
+  const checklist = document.getElementById('modeChecklist');
+  if (box) box.innerHTML = '<strong>PumpFlo-style workflow guidance:</strong><ul>' + notes.map(n => `<li>${n}</li>`).join('') + '</ul>';
+  if (checklist) checklist.innerHTML = `<strong>${mode.title} checklist:</strong><ul>${mode.checklist.map(n => `<li>${n}</li>`).join('')}</ul>`;
 }
 
 function calcTdh() {
@@ -153,6 +189,7 @@ function buildContext() {
   const headUnit = document.getElementById('headUnit').value;
   const sg = Number(document.getElementById('specificGravity').value || 1);
   const viscosity = Number(document.getElementById('viscosity').value || 1);
+  const workflowMode = document.getElementById('workflowMode').value;
   const pumpType = document.getElementById('pumpType').value;
   const serviceFactor = Number(document.getElementById('motorServiceFactor').value || 1.15);
   const solidsSize = Number(document.getElementById('solidsSize').value || 0);
@@ -162,7 +199,7 @@ function buildContext() {
   const targetHeadFt = toFeetHead(headInput, headUnit, sg);
   const fluidPenalty = 1 + Math.max(0, sg - 1) * 0.08 + Math.max(0, viscosity - 1) * 0.0015 + Math.max(0, solidsSize - 0.5) * 0.01;
   const adjustedHeadFt = targetHeadFt * fluidPenalty;
-  return { projectName: document.getElementById('projectName').value, projectRef: document.getElementById('projectRef').value, flowInput, flowUnit, headInput, headUnit, sg, viscosity, pumpType, serviceFactor, solidsSize, fluidTemp, materialPreference, targetFlowGpm, targetHeadFt, adjustedHeadFt };
+  return { projectName: document.getElementById('projectName').value, projectRef: document.getElementById('projectRef').value, flowInput, flowUnit, headInput, headUnit, workflowMode, sg, viscosity, pumpType, serviceFactor, solidsSize, fluidTemp, materialPreference, targetFlowGpm, targetHeadFt, adjustedHeadFt };
 }
 
 function recommend(e) {
@@ -175,9 +212,10 @@ function recommend(e) {
     const flowError = Math.abs(row.flowGpm - ctx.targetFlowGpm) / Math.max(ctx.targetFlowGpm, 1);
     const headError = Math.abs(row.headFt - ctx.adjustedHeadFt) / Math.max(ctx.adjustedHeadFt, 1);
     const typePenalty = ctx.pumpType === 'selfpriming' ? 0.05 : ctx.pumpType === 'submersible' ? 0.02 : 0;
+    const modePenalty = ctx.workflowMode === 'selfpriming' ? 0.03 : ctx.workflowMode === 'submersible' ? 0.01 : 0;
     const solidsPenalty = Math.max(0, ctx.solidsSize - 1) * 0.01;
     const materialPenalty = ctx.materialPreference === 'abrasive' ? 0.01 : ctx.materialPreference === 'corrosive' ? 0.02 : 0;
-    const score = 100 - ((flowError * 65) + (headError * 35) + ((typePenalty + solidsPenalty + materialPenalty) * 100));
+    const score = 100 - ((flowError * 65) + (headError * 35) + ((typePenalty + modePenalty + solidsPenalty + materialPenalty) * 100));
     const recommendedMotorHp = Math.ceil((row.powerHp * ctx.sg * ctx.serviceFactor) / 5) * 5;
     return { ...row, score, recommendedMotorHp, flowErrorPct: flowError * 100, headErrorPct: headError * 100 };
   }).sort((a,b) => b.score - a.score);
@@ -219,6 +257,7 @@ function renderRecommendation() {
     <h3>Recommendation summary</h3>
     <div class="notice">Prototype output only. Final engineering release should still confirm NPSH, solids handling, wear, and manufacturer-approved curve suitability.</div>
     <p><strong>Project:</strong> ${r.projectName} <br><strong>Reference:</strong> ${r.projectRef}</p>
+    <p><strong>Workflow mode:</strong> ${getModeConfig(r.workflowMode).title}</p>
     <p><strong>General recommendation:</strong> ${r.generalRecommendation}</p>
     <p><strong>Curve-based recommendation:</strong> ${best.model}</p>
     <p><strong>Why:</strong> The general recommendation follows your size-band rules. The curve-based recommendation is the best interpolated family match for target flow, adjusted head, fluid penalty, pump type, and motor service factor.</p>

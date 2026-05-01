@@ -99,3 +99,9 @@ Open:
 - 50 to 200 GPM with head above 120 ft prefers HH2000
 - 5-inch pump recommendations are intentionally discouraged
 - recommendation screen now includes PumpFlo-style workflow guidance and manual-review reminders
+
+
+## Guided workflow modes
+- Electric Process: customer flow, TDH, slurry properties, and manual motor validation focus
+- Self-Priming: suction-lift-first workflow with lift and suction hose warnings
+- Submersible: flooded-service style workflow with submergence/cooling reminder notes

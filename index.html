@@ -56,6 +56,13 @@
         </div>
 
         <div class="grid three">
+          <label>Workflow Mode
+            <select id="workflowMode">
+              <option value="electric">Electric Process</option>
+              <option value="selfpriming">Self-Priming</option>
+              <option value="submersible">Submersible</option>
+            </select>
+          </label>
           <label>Pump Type
             <select id="pumpType">
               <option value="submersible">Submersible</option>
@@ -111,7 +118,7 @@
           </label>
         </div>
 
-        <div id="workflowGuidance" class="notice"></div>
+        <div id="workflowGuidance" class="notice"></div><div id="modeChecklist" class="notice"></div>
         <div class="actions">
           <button type="button" id="calcTdhBtn">Calculate TDH from pipe variables</button>
           <button type="submit">Recommend pump</button>
