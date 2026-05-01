@@ -2,6 +2,7 @@ const defaultLibraryCsv = `MODEL,ROTOR,FLOW_GPM,HEAD_FT,EFFICIENCY_PCT,POWER_HP\
 
 let curveRows = [];
 let lastRecommendation = null;
+let autoRecommendTimer = null;
 
 const colors = ['#2563eb','#16a34a','#dc2626','#9333ea','#ea580c','#0891b2','#4f46e5','#d97706','#0f766e'];
 const els = {
@@ -28,6 +29,28 @@ const els = {
   familyFilter: document.getElementById('familyFilter'),
 };
 const fieldIds = ['projectName','projectRef','flowRate','flowUnit','headValue','headUnit','workflowMode','pumpType','specificGravity','viscosity','staticHead','pipeLength','pipeDiameter','elevationFt','atmosphericPressure','pipeFactor','fittingsCount','motorServiceFactor','solidsSize','fluidTemp','materialPreference','percentSolidsByWeight','availableMotorHp','motorVoltage','motorFrequency','targetRpm','useVfd','suctionLift','suctionHoseLength','tankSurfacePressure','submergenceDepth','coolingMethod','powerCableLength'];
+
+
+function updateAutoRunStatus(message='Auto-refresh is on for key project inputs.') {
+  let el = document.getElementById('autoRunStatus');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'autoRunStatus';
+    el.className = 'autorun-status';
+    document.querySelector('.sticky-actions')?.after(el);
+  }
+  el.innerHTML = `<strong>Auto-refresh:</strong> ${message}`;
+}
+
+function queueAutoRecommend(reason='inputs updated') {
+  clearTimeout(autoRecommendTimer);
+  updateAutoRunStatus(`Refreshing recommendation after ${reason}...`);
+  autoRecommendTimer = setTimeout(() => {
+    if (!curveRows.length) return;
+    recommend();
+    updateAutoRunStatus('Recommendation refreshed automatically.');
+  }, 450);
+}
 
 function parseCsv(text, sourceName='uploaded') {
   const lines = text.trim().split(/\r?\n/).filter(Boolean);
@@ -500,7 +523,7 @@ function exportHtml() { if (!lastRecommendation) return alert('Run a recommendat
 function saveProject() { const payload = { project: getFormValues(), curvesCsv: buildCsv(curveRows) }; downloadFile(`${(document.getElementById('projectName').value || 'pump-project').replace(/\s+/g,'-').toLowerCase()}.json`, JSON.stringify(payload, null, 2), 'application/json'); }
 function loadProjectFile(file) { const reader = new FileReader(); reader.onload = () => { const payload = JSON.parse(reader.result); if (payload.project) setFormValues(payload.project); if (payload.curvesCsv) curveRows = parseCsv(payload.curvesCsv, 'project-load'); renderLibrary(); recommend(); }; reader.readAsText(file); }
 
-els.useDefaultLibraryBtn.addEventListener('click', () => { curveRows = parseCsv(defaultLibraryCsv, 'default-library'); renderLibrary(); updateAtmosphericPressureFromElevation(); applyWorkflowModeUI(); updateWorkflowGuidance(); recommend(); });
+els.useDefaultLibraryBtn.addEventListener('click', () => { curveRows = parseCsv(defaultLibraryCsv, 'default-library'); renderLibrary(); updateAtmosphericPressureFromElevation(); applyWorkflowModeUI(); updateWorkflowGuidance(); recommend(); updateAutoRunStatus(); });
 els.showLibraryToolsBtn.addEventListener('click', () => { if (els.libraryToolsPanel) els.libraryToolsPanel.open = true; els.libraryToolsPanel?.scrollIntoView({ behavior: 'smooth', block: 'start' }); });
 els.calcTdhBtn.addEventListener('click', calcTdh);
 els.exportJsonBtn.addEventListener('click', exportJson);
@@ -511,10 +534,11 @@ els.loadProjectBtn.addEventListener('click', () => els.projectFile.click());
 els.projectFile.addEventListener('change', e => { const file = e.target.files[0]; if (file) loadProjectFile(file); });
 els.printBtn.addEventListener('click', () => window.print());
 els.familyFilter.addEventListener('change', () => recommend());
-document.getElementById('workflowMode').addEventListener('change', () => { applyWorkflowModeUI(); updateWorkflowGuidance(); });
-document.getElementById('elevationFt').addEventListener('input', updateAtmosphericPressureFromElevation);
-els.appForm.addEventListener('input', updateWorkflowGuidance);
-els.appForm.addEventListener('change', updateWorkflowGuidance);
+document.getElementById('workflowMode').addEventListener('change', () => { applyWorkflowModeUI(); updateWorkflowGuidance(); queueAutoRecommend('workflow mode change'); });
+document.getElementById('elevationFt').addEventListener('input', () => { updateAtmosphericPressureFromElevation(); queueAutoRecommend('elevation update'); });
+const autoRunFields = ['projectName','projectRef','flowRate','flowUnit','headValue','headUnit','workflowMode','pumpType','specificGravity','viscosity','staticHead','pipeLength','pipeDiameter','elevationFt','atmosphericPressure','pipeFactor','fittingsCount','motorServiceFactor','solidsSize','fluidTemp','materialPreference','percentSolidsByWeight','availableMotorHp','motorVoltage','motorFrequency','targetRpm','useVfd','suctionLift','suctionHoseLength','tankSurfacePressure','submergenceDepth','coolingMethod','powerCableLength'];
+els.appForm.addEventListener('input', e => { updateWorkflowGuidance(); if (autoRunFields.includes(e.target.id)) queueAutoRecommend(e.target.id); });
+els.appForm.addEventListener('change', e => { updateWorkflowGuidance(); if (autoRunFields.includes(e.target.id)) queueAutoRecommend(e.target.id); });
 els.appForm.addEventListener('submit', recommend);
 els.curveFile.addEventListener('change', async (e) => { const files = [...e.target.files]; if (!files.length) return; const parsed = []; for (const file of files) parsed.push(...parseCsv(await file.text(), file.name)); curveRows = parsed; renderLibrary(); recommend(); });
-curveRows = parseCsv(defaultLibraryCsv, 'default-library'); renderLibrary(); updateAtmosphericPressureFromElevation(); applyWorkflowModeUI(); updateWorkflowGuidance(); recommend();
+curveRows = parseCsv(defaultLibraryCsv, 'default-library'); renderLibrary(); updateAtmosphericPressureFromElevation(); applyWorkflowModeUI(); updateWorkflowGuidance(); recommend(); updateAutoRunStatus();
