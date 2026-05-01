@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Pump Curve Lab</title>
-  <link rel="stylesheet" href="styles.css?v=20260501f" />
+  <link rel="stylesheet" href="styles.css?v=20260501g" />
 </head>
 <body>
   <header class="hero">
@@ -72,7 +72,7 @@
         </div>
 
         <div class="form-section compact-mode-row">
-          <div class="grid three">
+          <div class="grid two lean-grid">
             <label>Workflow Mode
               <select id="workflowMode">
                 <option value="electric">Electric Process</option>
@@ -80,25 +80,45 @@
                 <option value="submersible">Submersible</option>
               </select>
             </label>
-            <label>Pump Type
-              <select id="pumpType">
-                <option value="submersible">Submersible</option>
-                <option value="flooded">Flooded Suction</option>
-                <option value="selfpriming">Self-Priming</option>
-              </select>
-            </label>
             <label>Specific Gravity
               <input type="number" id="specificGravity" value="1" step="0.01" min="0.1" />
             </label>
-            <label>Viscosity (cP)
-              <input type="number" id="viscosity" value="1" step="0.1" min="0.1" />
+          </div>
+        </div>
+
+        <div id="quickModeFields" class="quick-mode-fields">
+          <div id="quickElectricFields" class="grid two quick-mode-group">
+            <label>Target Operating RPM
+              <input type="number" id="targetRpm" value="1400" step="1" min="100" />
+            </label>
+            <label>Use VFD?
+              <select id="useVfd">
+                <option value="yes">Yes</option>
+                <option value="no">No</option>
+              </select>
+            </label>
+          </div>
+          <div id="quickSelfPrimingFields" class="grid two quick-mode-group hidden">
+            <label>Suction Lift (ft)
+              <input type="number" id="suctionLift" value="16" step="any" min="0" />
+            </label>
+            <label>Suction Hose Length (ft)
+              <input type="number" id="suctionHoseLength" value="100" step="any" min="0" />
+            </label>
+          </div>
+          <div id="quickSubmersibleFields" class="grid two quick-mode-group hidden">
+            <label>Submergence Depth (ft)
+              <input type="number" id="submergenceDepth" value="10" step="any" min="0" />
+            </label>
+            <label>Power Cable Length (ft)
+              <input type="number" id="powerCableLength" value="50" step="any" min="0" />
             </label>
           </div>
         </div>
 
         <div id="workflowGuidance" class="notice"></div>
 
-        <details class="advanced-panel" open>
+        <details class="advanced-panel">
           <summary>Hydraulic inputs</summary>
           <div id="commonHydraulicInputs" class="grid three inside-panel">
             <label>Static Lift / Head
@@ -176,41 +196,46 @@
                 <option value="50">50 Hz</option>
               </select>
             </label>
-            <label>Target Operating RPM
-              <input type="number" id="targetRpm" value="1400" step="1" min="100" />
-            </label>
-            <label>Use VFD?
-              <select id="useVfd">
-                <option value="yes">Yes</option>
-                <option value="no">No</option>
+            <label>Pump Type
+              <select id="pumpType">
+                <option value="submersible">Submersible</option>
+                <option value="flooded">Flooded Suction</option>
+                <option value="selfpriming">Self-Priming</option>
               </select>
+            </label>
+            <label>Viscosity (cP)
+              <input type="number" id="viscosity" value="1" step="0.1" min="0.1" />
             </label>
           </div>
 
           <div id="selfPrimingModeFields" class="grid three mode-group hidden inside-panel">
-            <label>Suction Lift (ft)
-              <input type="number" id="suctionLift" value="16" step="any" min="0" />
-            </label>
-            <label>Suction Hose Length (ft)
-              <input type="number" id="suctionHoseLength" value="100" step="any" min="0" />
-            </label>
             <label>Tank Surface Pressure (psi)
               <input type="number" id="tankSurfacePressure" value="1" step="any" />
+            </label>
+            <label>Pump Type
+              <select id="pumpTypeSelfPrimeMirror">
+                <option value="selfpriming">Self-Priming</option>
+              </select>
+            </label>
+            <label>Viscosity (cP)
+              <input type="number" id="viscositySelfPrimeMirror" value="1" step="0.1" min="0.1" />
             </label>
           </div>
 
           <div id="submersibleModeFields" class="grid three mode-group hidden inside-panel">
-            <label>Submergence Depth (ft)
-              <input type="number" id="submergenceDepth" value="10" step="any" min="0" />
-            </label>
             <label>Motor Cooling Method
               <select id="coolingMethod">
                 <option value="flooded">Flooded / ambient</option>
                 <option value="jacketed">Cooling jacket</option>
               </select>
             </label>
-            <label>Power Cable Length (ft)
-              <input type="number" id="powerCableLength" value="50" step="any" min="0" />
+            <label>Pump Type
+              <select id="pumpTypeSubMirror">
+                <option value="submersible">Submersible</option>
+              </select>
+            </label>
+            <label>Viscosity (cP)
+              <input type="number" id="viscositySubMirror" value="1" step="0.1" min="0.1" />
             </label>
           </div>
         </details>
@@ -286,6 +311,6 @@
     </section>
   </main>
 
-  <script src="app.js?v=20260501f"></script>
+  <script src="app.js?v=20260501g"></script>
 </body>
 </html>

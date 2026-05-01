@@ -130,14 +130,30 @@ function avoidFiveInPumpNote() {
 
 
 
+
+function syncMirrorFields() {
+  const mode = document.getElementById('workflowMode').value;
+  const viscosity = document.getElementById('viscosity');
+  const spMirror = document.getElementById('viscositySelfPrimeMirror');
+  const subMirror = document.getElementById('viscositySubMirror');
+  if (spMirror && viscosity && mode === 'selfpriming') viscosity.value = spMirror.value || viscosity.value;
+  if (subMirror && viscosity && mode === 'submersible') viscosity.value = subMirror.value || viscosity.value;
+}
+
 function applyWorkflowModeUI() {
   const mode = document.getElementById('workflowMode').value;
   const electric = document.getElementById('electricModeFields');
   const selfp = document.getElementById('selfPrimingModeFields');
   const subm = document.getElementById('submersibleModeFields');
+  const quickElectric = document.getElementById('quickElectricFields');
+  const quickSelf = document.getElementById('quickSelfPrimingFields');
+  const quickSub = document.getElementById('quickSubmersibleFields');
   if (electric) electric.classList.toggle('hidden', mode !== 'electric');
   if (selfp) selfp.classList.toggle('hidden', mode !== 'selfpriming');
   if (subm) subm.classList.toggle('hidden', mode !== 'submersible');
+  if (quickElectric) quickElectric.classList.toggle('hidden', mode !== 'electric');
+  if (quickSelf) quickSelf.classList.toggle('hidden', mode !== 'selfpriming');
+  if (quickSub) quickSub.classList.toggle('hidden', mode !== 'submersible');
 
   const pumpType = document.getElementById('pumpType');
   if (pumpType) {
@@ -145,6 +161,7 @@ function applyWorkflowModeUI() {
     if (mode === 'submersible') pumpType.value = 'submersible';
     if (mode === 'electric' && pumpType.value === 'selfpriming') pumpType.value = 'flooded';
   }
+  syncMirrorFields();
 }
 
 

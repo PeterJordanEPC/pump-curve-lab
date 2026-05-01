@@ -115,3 +115,6 @@ code { background:#f1f5f9; padding:2px 6px; border-radius:8px; }
 
 .autorun-status { margin-top:10px; font-size:13px; color:var(--muted); }
 .autorun-status strong { color:var(--accent-dark); }
+
+.lean-grid, .quick-mode-fields { margin-bottom: 12px; }
+.quick-mode-group { background:#f8fbff; border:1px solid var(--line); border-radius:14px; padding:14px; }
