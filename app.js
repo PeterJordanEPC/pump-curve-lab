@@ -25,7 +25,7 @@ const els = {
   appForm: document.getElementById('appForm'),
   familyFilter: document.getElementById('familyFilter'),
 };
-const fieldIds = ['projectName','projectRef','flowRate','flowUnit','headValue','headUnit','workflowMode','pumpType','specificGravity','viscosity','staticHead','pipeLength','pipeDiameter','elevationFt','atmosphericPressure','pipeFactor','fittingsCount','motorServiceFactor','solidsSize','fluidTemp','materialPreference','motorFrequency','targetRpm','useVfd','suctionLift','suctionHoseLength','tankSurfacePressure','submergenceDepth','coolingMethod','powerCableLength'];
+const fieldIds = ['projectName','projectRef','flowRate','flowUnit','headValue','headUnit','workflowMode','pumpType','specificGravity','viscosity','staticHead','pipeLength','pipeDiameter','elevationFt','atmosphericPressure','pipeFactor','fittingsCount','motorServiceFactor','solidsSize','fluidTemp','materialPreference','percentSolidsByWeight','availableMotorHp','motorVoltage','motorFrequency','targetRpm','useVfd','suctionLift','suctionHoseLength','tankSurfacePressure','submergenceDepth','coolingMethod','powerCableLength'];
 
 function parseCsv(text, sourceName='uploaded') {
   const lines = text.trim().split(/\r?\n/).filter(Boolean);
@@ -176,6 +176,8 @@ function getWorkflowGuidance(ctx) {
   }
   notes.push('Avoid 5-in pump recommendations unless there is a very strong reason to override the standard sizing rule.');
   notes.push('Use Job/engineering judgment on motor sizing. PumpFlo training showed manual override may be needed after VFD or RPM review.');
+  if (ctx.materialPreference === 'abrasive') notes.push('Abrasive-slurry training note: a faster small-rotor pump can wear far faster than a slower large-rotor pump moving the same solids.');
+  if (ctx.availableMotorHp > 0) notes.push('Customer motor limit entered: keep recommendations within available installed horsepower when possible.');
   return notes;
 }
 
@@ -190,6 +192,19 @@ function updateWorkflowGuidance() {
   if (checklist) checklist.innerHTML = `<strong>${mode.title} checklist:</strong><ul>${mode.checklist.map(n => `<li>${n}</li>`).join('')}</ul>`;
 }
 
+
+
+function getWearPenalty(ctx) {
+  const abrasive = ctx.materialPreference === 'abrasive' ? 1 : 0;
+  const solidsFactor = Math.max(0, ctx.percentSolidsByWeight - 20) * 0.002;
+  const rpmFactor = Math.max(0, ctx.targetRpm - 1200) * 0.0008;
+  return abrasive * (0.03 + solidsFactor + rpmFactor);
+}
+
+function getVfdAvailableHp(baseMotorHp, targetRpm, baseRpm) {
+  const ratio = Math.max(targetRpm, 0) / Math.max(baseRpm, 1);
+  return baseMotorHp * ratio;
+}
 
 function getModeAdjustedHead(ctx) {
   let adjusted = ctx.adjustedHeadFt;
@@ -212,13 +227,23 @@ function getModeWarnings(ctx, best) {
     if (ctx.suctionHoseLength > 200) warnings.push('Self-prime warning: suction hose length is above the usual 150 to 200 ft practical range.');
   }
   if (ctx.workflowMode === 'electric') {
-    if (ctx.useVfd === 'yes' && ctx.targetRpm < 1800) warnings.push('Electric mode note: VFD / reduced RPM selected, motor sizing should be manually validated just like the PumpFlo workflow.');
+    if (ctx.useVfd === 'yes' && ctx.targetRpm < 1800) warnings.push(`Electric mode note: VFD / reduced RPM selected. Base motor HP must be checked against reduced-speed available HP, not just pump HP at duty point.`);
+    if (ctx.materialPreference === 'abrasive' && ctx.targetRpm > 1500) warnings.push('Wear warning: abrasive slurry plus higher RPM will accelerate wear. Prefer a larger rotor / lower-speed solution when possible.');
     if (best && best.recommendedMotorHp < best.powerHp * ctx.sg) warnings.push('Motor sizing warning: recommended motor is close to calculated pump power after SG adjustment.');
   }
   if (ctx.workflowMode === 'submersible') {
     if (ctx.submergenceDepth < 8) warnings.push('Submersible warning: low submergence may affect cooling and stable operation.');
     if (ctx.coolingMethod === 'flooded' && ctx.fluidTemp > 120) warnings.push('Submersible warning: higher fluid temperature may require cooling review.');
     if (ctx.powerCableLength > 200) warnings.push('Submersible note: long power cable length should be checked for voltage drop.');
+  }
+  if (ctx.workflowMode === 'selfpriming') {
+    warnings.push('Self-prime motor note: include roughly 2 HP overhead for the vacuum pump package during final engineering review.');
+  }
+  if (ctx.availableMotorHp > 0 && best && best.recommendedMotorHp > ctx.availableMotorHp) {
+    warnings.push(`Customer motor limit warning: best-fit recommendation wants ${best.recommendedMotorHp} HP but customer available motor is ${ctx.availableMotorHp} HP.`);
+  }
+  if (ctx.motorVoltage && ctx.motorVoltage !== '460') {
+    warnings.push(`Motor voltage note: customer requested ${ctx.motorVoltage} V, so final motor availability and pricing should be confirmed.`);
   }
   return warnings;
 }
@@ -269,8 +294,8 @@ function buildContext() {
   const powerCableLength = Number(document.getElementById('powerCableLength').value || 0);
   const fluidPenalty = 1 + Math.max(0, sg - 1) * 0.08 + Math.max(0, viscosity - 1) * 0.0015 + Math.max(0, solidsSize - 0.5) * 0.01;
   const adjustedHeadFt = targetHeadFt * fluidPenalty;
-  const base = { projectName: document.getElementById('projectName').value, projectRef: document.getElementById('projectRef').value, flowInput, flowUnit, headInput, headUnit, workflowMode, sg, viscosity, pumpType, serviceFactor, solidsSize, fluidTemp, materialPreference, motorFrequency, targetRpm, useVfd, suctionLift, suctionHoseLength, tankSurfacePressure, submergenceDepth, coolingMethod, powerCableLength, targetFlowGpm, targetHeadFt, adjustedHeadFt };
-  return { ...base, modeAdjustedHeadFt: getModeAdjustedHead(base) };
+  const base = { projectName: document.getElementById('projectName').value, projectRef: document.getElementById('projectRef').value, flowInput, flowUnit, headInput, headUnit, workflowMode, sg, viscosity, pumpType, serviceFactor, solidsSize, fluidTemp, materialPreference, percentSolidsByWeight, availableMotorHp, motorVoltage, motorFrequency, targetRpm, useVfd, suctionLift, suctionHoseLength, tankSurfacePressure, submergenceDepth, coolingMethod, powerCableLength, targetFlowGpm, targetHeadFt, adjustedHeadFt };
+  return { ...base, modeAdjustedHeadFt: getModeAdjustedHead(base), wearPenalty: getWearPenalty(base) };
 }
 
 function recommend(e) {
@@ -288,12 +313,16 @@ function recommend(e) {
     const materialPenalty = ctx.materialPreference === 'abrasive' ? 0.01 : ctx.materialPreference === 'corrosive' ? 0.02 : 0;
     const selfPrimePenalty = ctx.workflowMode === 'selfpriming' ? Math.max(0, ctx.suctionLift - 18) * 0.004 + Math.max(0, ctx.suctionHoseLength - 150) * 0.0008 : 0;
     const submersiblePenalty = ctx.workflowMode === 'submersible' ? Math.max(0, 8 - ctx.submergenceDepth) * 0.01 : 0;
-    const score = 100 - ((flowError * 65) + (headError * 35) + ((typePenalty + modePenalty + solidsPenalty + materialPenalty + selfPrimePenalty + submersiblePenalty) * 100));
+    const wearPenalty = ctx.wearPenalty + (ctx.workflowMode !== 'submersible' && ctx.materialPreference === 'abrasive' && ctx.targetRpm > 1500 ? 0.02 : 0);
+    const customerHpPenalty = ctx.availableMotorHp > 0 && row.powerHp * ctx.sg * ctx.serviceFactor > ctx.availableMotorHp ? 0.08 : 0;
+    const score = 100 - ((flowError * 65) + (headError * 35) + ((typePenalty + modePenalty + solidsPenalty + materialPenalty + selfPrimePenalty + submersiblePenalty + wearPenalty + customerHpPenalty) * 100));
     let recommendedMotorHp = Math.ceil((row.powerHp * ctx.sg * ctx.serviceFactor) / 5) * 5;
     if (ctx.workflowMode === 'electric' && ctx.useVfd === 'yes' && ctx.targetRpm < 1800) {
-      const rpmRatio = Math.max(ctx.targetRpm, 600) / 1800;
-      const adjustedMotorNeed = row.powerHp * ctx.sg * ctx.serviceFactor * (0.75 + rpmRatio * 0.25);
-      recommendedMotorHp = Math.ceil(adjustedMotorNeed / 5) * 5;
+      const minBaseMotor = (row.powerHp * ctx.sg * ctx.serviceFactor) / Math.max(ctx.targetRpm / 1800, 0.1);
+      recommendedMotorHp = Math.ceil(minBaseMotor / 5) * 5;
+    }
+    if (ctx.workflowMode === 'selfpriming') {
+      recommendedMotorHp = Math.ceil((recommendedMotorHp + 2) / 5) * 5;
     }
     return { ...row, score, recommendedMotorHp, flowErrorPct: flowError * 100, headErrorPct: headError * 100 };
   }).sort((a,b) => b.score - a.score);
@@ -336,7 +365,8 @@ function getModeDatasheet(r) {
         ['Suction Lift (ft)', r.suctionLift.toFixed(1)],
         ['Suction Hose Length (ft)', r.suctionHoseLength.toFixed(1)],
         ['Tank Surface Pressure (psi)', r.tankSurfacePressure.toFixed(1)],
-        ['Guidance', 'Keep suction lift at or below 18 ft preferred, with ~24 ft practical hard warning.']
+        ['Guidance', 'Keep suction lift at or below 18 ft preferred, with ~24 ft practical hard warning.'],
+        ['Vacuum Pump Overhead', 'Add about 2 HP overhead during final self-prime motor review.']
       ])
     };
   }
@@ -359,7 +389,8 @@ function getModeDatasheet(r) {
       ['VFD Used', r.useVfd],
       ['Elevation (ft)', String(Number(document.getElementById('elevationFt').value || 0).toFixed(0))],
       ['Atmospheric Pressure (psi)', String(Number(document.getElementById('atmosphericPressure').value || 14.7).toFixed(2))],
-      ['Guidance', 'Manual motor validation is still required, especially when reducing RPM with a VFD.']
+      ['Guidance', 'Manual motor validation is still required, especially when reducing RPM with a VFD.'],
+      ['Wear Guidance', 'For abrasive slurry, prefer lower RPM / larger rotor where practical to reduce wear.']
     ])
   };
 }

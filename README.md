@@ -132,3 +132,11 @@ Open:
 - Self-Priming datasheet includes suction lift, suction hose length, and tank surface pressure
 - Submersible datasheet includes submergence, cooling method, and cable length
 - Static asset URLs are versioned to force Pages/browser refresh when new code ships
+
+
+## Additional Dan training behaviors applied
+- added percent solids by weight, available customer motor HP, and motor voltage inputs
+- abrasive slurry + higher RPM now penalizes recommendations to reflect wear concerns
+- VFD motor sizing now uses reduced-speed available horsepower logic more directly
+- self-prime mode now carries a vacuum-pump horsepower overhead reminder (~2 HP)
+- app warns when best-fit recommendation exceeds customer available motor HP

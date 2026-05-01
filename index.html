@@ -124,6 +124,23 @@
           </label>
         </div>
 
+        <div class="grid three">
+          <label>Percent Solids by Weight
+            <input type="number" id="percentSolidsByWeight" value="50" step="1" min="0" max="100" />
+          </label>
+          <label>Available Customer Motor HP
+            <input type="number" id="availableMotorHp" value="0" step="1" min="0" />
+          </label>
+          <label>Motor Voltage
+            <select id="motorVoltage">
+              <option value="460">460 V</option>
+              <option value="230">230 V</option>
+              <option value="575">575 V</option>
+              <option value="other">Other</option>
+            </select>
+          </label>
+        </div>
+
         <div id="electricModeFields" class="grid three mode-group">
           <label>Base Motor Frequency
             <select id="motorFrequency">
