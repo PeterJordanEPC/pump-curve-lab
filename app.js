@@ -65,7 +65,8 @@ const els = {
   printBtn: $('printBtn'),
   appForm: $('appForm'),
   familyFilter: $('familyFilter'),
-  validationSummary: $('validationSummary')
+  validationSummary: $('validationSummary'),
+  leadRecommendationBand: $('leadRecommendationBand')
 };
 const fieldIds = ['projectName','projectRef','flowRate','flowUnit','headValue','headUnit','workflowMode','pumpType','specificGravity','viscosity','staticHead','pipeLength','pipeDiameter','elevationFt','atmosphericPressure','pipeFactor','fittingsCount','motorServiceFactor','solidsSize','fluidTemp','materialPreference','percentSolidsByWeight','availableMotorHp','motorVoltage','motorFrequency','targetRpm','useVfd','suctionLift','suctionHoseLength','tankSurfacePressure','submergenceDepth','coolingMethod','powerCableLength'];
 const autoRunFieldSet = new Set(fieldIds);
@@ -285,6 +286,13 @@ function avoidFiveInPumpNote() {
   return 'Avoid 5-in pump when making suggestions';
 }
 
+function getSizingRuleNote(flowGpm, adjustedHeadFt) {
+  if (flowGpm >= 50 && flowGpm < 200 && adjustedHeadFt > 120) return 'High-head exception applied, recommend HH2000 instead of a standard 2-in pump.';
+  if (flowGpm < 5) return 'Below the standard lead-screening band, manual review recommended.';
+  if (flowGpm > 12000) return 'Above the standard lead-screening band, manual review recommended.';
+  return 'Recommended from your lead-screening flow bands.';
+}
+
 function syncMirrorFields() {
   const mode = $('workflowMode').value;
   const viscosity = $('viscosity');
@@ -367,9 +375,30 @@ function getWorkflowGuidance(ctx) {
   return notes;
 }
 
+function renderLeadRecommendationBand() {
+  const ctx = buildContext();
+  const generalRecommendation = getGeneralPumpRecommendation(ctx.targetFlowGpm, ctx.modeAdjustedHeadFt);
+  const ruleNote = getSizingRuleNote(ctx.targetFlowGpm, ctx.modeAdjustedHeadFt);
+  if (!els.leadRecommendationBand) return;
+  els.leadRecommendationBand.innerHTML = `
+    <div>
+      <div class="lead-band-title">Lead recommendation</div>
+      <div class="lead-band-pump">${generalRecommendation}</div>
+      <div class="lead-band-copy">${ruleNote}</div>
+      <div class="rule-note">${avoidFiveInPumpNote()}.</div>
+    </div>
+    <div class="lead-band-grid">
+      <div class="lead-band-tile"><div class="k">Flow</div><div class="v">${ctx.targetFlowGpm.toFixed(0)} gpm</div></div>
+      <div class="lead-band-tile"><div class="k">Mode-adjusted head</div><div class="v">${ctx.modeAdjustedHeadFt.toFixed(1)} ft</div></div>
+      <div class="lead-band-tile"><div class="k">Workflow</div><div class="v">${getModeConfig(ctx.workflowMode).title}</div></div>
+      <div class="lead-band-tile"><div class="k">Specific gravity</div><div class="v">${ctx.sg.toFixed(2)}</div></div>
+    </div>`;
+}
+
 function updateWorkflowGuidance() {
   const ctx = buildContext();
   applyWorkflowModeUI();
+  renderLeadRecommendationBand();
   const notes = getWorkflowGuidance(ctx);
   const mode = getModeConfig(ctx.workflowMode);
   $('workflowGuidance').innerHTML = '<strong>PumpFlo-style workflow guidance:</strong><ul>' + notes.map(n => `<li>${n}</li>`).join('') + '</ul>';
@@ -566,8 +595,8 @@ function getModeDatasheet(r) {
     ['Project', r.projectName || 'Untitled'],
     ['Reference', r.projectRef || ''],
     ['Workflow Mode', getModeConfig(r.workflowMode).title],
+    ['Lead Screening Size', r.generalRecommendation],
     ['Best Pump', r.best.model],
-    ['General Recommendation', r.generalRecommendation],
     ['Target Flow (gpm)', r.targetFlowGpm.toFixed(0)],
     ['Requested TDH (ft)', r.adjustedHeadFt.toFixed(1)],
     ['Operating Flow (gpm)', r.best.dutyFlowGpm.toFixed(0)],
@@ -616,13 +645,14 @@ function renderRecommendation() {
       <div class="exec-hero">
         <div class="exec-eyebrow">Recommended pump</div>
         <div class="exec-title">${best.model}</div>
-        <p class="exec-sub">Requested ${r.targetFlowGpm.toFixed(0)} gpm at ${r.modeAdjustedHeadFt.toFixed(1)} ft, operating at about ${best.dutyFlowGpm.toFixed(0)} gpm and ${best.dutyHeadFt.toFixed(1)} ft where the pump and system curves intersect.</p>
+        <p class="exec-sub">Lead screen says <strong>${r.generalRecommendation}</strong>. Curve fit says <strong>${best.model}</strong> is the strongest current match, operating at about ${best.dutyFlowGpm.toFixed(0)} gpm and ${best.dutyHeadFt.toFixed(1)} ft where the pump and system curves intersect.</p>
         <div class="result-actions">
           <button type="button" class="primary" id="inlineExportHtmlBtn">Export datasheet</button>
           <button type="button" class="secondary" id="inlinePrintBtn">Print / Save PDF</button>
         </div>
       </div>
       <div class="exec-metrics">
+        <div class="exec-metric"><div class="k">Lead size</div><div class="v">${r.generalRecommendation}</div></div>
         <div class="exec-metric"><div class="k">Recommended motor</div><div class="v">${best.recommendedMotorHp} HP</div></div>
         <div class="exec-metric"><div class="k">Fit score</div><div class="v">${best.score.toFixed(1)}</div></div>
         <div class="exec-metric"><div class="k">Duty efficiency</div><div class="v">${best.dutyEfficiencyPct.toFixed(1)}%</div></div>
@@ -649,6 +679,7 @@ function renderRecommendation() {
       <div class="result-note">
         <strong>Project:</strong> ${r.projectName} <br><strong>Reference:</strong> ${r.projectRef}<br>
         <strong>Workflow mode:</strong> ${getModeConfig(r.workflowMode).title}<br>
+        <strong>Lead screening size:</strong> ${r.generalRecommendation}<br>
         <strong>Why this pump:</strong> Best balance of curve intersection, BEP proximity, flow/head error, and workflow-specific rules.
       </div>
       ${warnings.length ? `<div class="notice"><strong>Key warnings</strong><ul class="warning-list">${warnings.map(n => `<li>${n}</li>`).join('')}</ul></div>` : ''}
@@ -677,7 +708,7 @@ function renderRecommendation() {
   els.comparisonWrap.className = 'recommendation';
   els.comparisonWrap.innerHTML = `
     <p><strong>Top alternatives:</strong> Compare the leading candidates without crowding the main recommendation.</p>
-    <table class="table"><thead><tr><th>Model</th><th>Source</th><th>Rotor</th><th>Op Flow</th><th>Op Head</th><th>BEP Proximity</th><th>Flow Error</th><th>Head Error</th><th>Score</th></tr></thead><tbody>${compareRows}</tbody></table>`;
+    <div class="table-scroll-wrap"><table class="table"><thead><tr><th>Model</th><th>Source</th><th>Rotor</th><th>Op Flow</th><th>Op Head</th><th>BEP Proximity</th><th>Flow Error</th><th>Head Error</th><th>Score</th></tr></thead><tbody>${compareRows}</tbody></table></div>`;
 
   $('inlineExportHtmlBtn')?.addEventListener('click', exportHtml);
   $('inlinePrintBtn')?.addEventListener('click', () => window.print());
@@ -791,7 +822,7 @@ function renderLibrary() {
   const banner = document.querySelector('.default-library-banner strong');
   if (banner) banner.textContent = sources.includes('default-library') ? 'Default Eddy curve library active' : 'Custom curve library active';
   const preview = curveRows.slice(0, 12).map(r => `<tr><td>${r.model}</td><td>${r.source}</td><td>${r.rotor}</td><td>${r.flowGpm}</td><td>${r.headFt}</td><td>${r.efficiencyPct}</td><td>${r.powerHp}</td></tr>`).join('');
-  els.curveTableWrap.innerHTML = `<table class="table"><thead><tr><th>Model</th><th>Source</th><th>Rotor</th><th>Flow gpm</th><th>Head ft</th><th>Eff %</th><th>Power HP</th></tr></thead><tbody>${preview}</tbody></table>`;
+  els.curveTableWrap.innerHTML = `<div class="table-scroll-wrap"><table class="table"><thead><tr><th>Model</th><th>Source</th><th>Rotor</th><th>Flow gpm</th><th>Head ft</th><th>Eff %</th><th>Power HP</th></tr></thead><tbody>${preview}</tbody></table></div>`;
 }
 
 function exportJson() {

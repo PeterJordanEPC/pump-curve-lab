@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Pump Curve Lab</title>
-  <link rel="stylesheet" href="styles.css?v=20260501i" />
+  <link rel="stylesheet" href="styles.css?v=20260501j" />
 </head>
 <body>
   <header class="hero">
@@ -38,6 +38,19 @@
       </div>
 
       <form id="appForm">
+        <div class="lead-intro-panel">
+          <div>
+            <p class="mini-label">Lead intake flow</p>
+            <h3>Start with the project duty point</h3>
+            <p class="muted">A lead should be able to enter flow and head fast, then see the recommended pump size, likely model, and a clean curve without digging through engineering-only inputs.</p>
+          </div>
+          <div class="lead-intro-badges">
+            <span class="mini-stat">Fast lead screening</span>
+            <span class="mini-stat">Pump size logic built in</span>
+            <span class="mini-stat">Avoid 5-in suggestions</span>
+          </div>
+        </div>
+
         <div class="form-section compact-top-section">
           <h3>Project + duty point</h3>
           <div class="grid two top-core-grid">
@@ -117,6 +130,7 @@
         </div>
 
         <div id="validationSummary" class="notice validation-summary hidden"></div>
+        <div id="leadRecommendationBand" class="lead-recommendation-band"></div>
         <div id="workflowGuidance" class="notice"></div>
 
         <details class="advanced-panel">
@@ -308,10 +322,12 @@
           <p>Useful for internal review without crowding the main recommendation.</p>
         </div>
       </div>
-      <div id="comparisonWrap" class="recommendation empty">Top recommendations will appear here.</div>
+      <div class="table-scroll-wrap">
+        <div id="comparisonWrap" class="recommendation empty">Top recommendations will appear here.</div>
+      </div>
     </section>
   </main>
 
-  <script src="app.js?v=20260501i"></script>
+  <script src="app.js?v=20260501j"></script>
 </body>
 </html>
