@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pump Curve Lab</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="hero">
+    <div>
+      <h1>Pump Curve Lab</h1>
+      <p>Upload pump curves, calculate TDH, account for fluid properties, and generate a best-fit pump and motor recommendation with an updated operating curve.</p>
+    </div>
+    <button id="loadSampleBtn">Load sample curves</button>
+  </header>
+
+  <main class="layout">
+    <section class="card form-card">
+      <h2>1. Application inputs</h2>
+      <form id="appForm">
+        <div class="grid two">
+          <label>Flow Rate
+            <input type="number" id="flowRate" value="2200" step="any" min="0" />
+          </label>
+          <label>Flow Unit
+            <select id="flowUnit">
+              <option value="gpm">US gpm</option>
+              <option value="m3h">m³/h</option>
+              <option value="lps">L/s</option>
+            </select>
+          </label>
+          <label>Head / Pressure Value
+            <input type="number" id="headValue" value="30" step="any" min="0" />
+          </label>
+          <label>Head Unit
+            <select id="headUnit">
+              <option value="ft">ft TDH</option>
+              <option value="m">m TDH</option>
+              <option value="psi">psi</option>
+              <option value="bar">bar</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="grid three">
+          <label>Pump Type
+            <select id="pumpType">
+              <option value="submersible">Submersible</option>
+              <option value="flooded">Flooded Suction</option>
+              <option value="selfpriming">Self-Priming</option>
+            </select>
+          </label>
+          <label>Specific Gravity
+            <input type="number" id="specificGravity" value="1" step="0.01" min="0.1" />
+          </label>
+          <label>Viscosity (cP)
+            <input type="number" id="viscosity" value="1" step="0.1" min="0.1" />
+          </label>
+        </div>
+
+        <div class="grid three">
+          <label>Static Lift / Head
+            <input type="number" id="staticHead" value="30" step="any" min="0" />
+          </label>
+          <label>Pipe Length
+            <input type="number" id="pipeLength" value="45" step="any" min="0" />
+          </label>
+          <label>Pipe Diameter (in)
+            <input type="number" id="pipeDiameter" value="6" step="any" min="0.25" />
+          </label>
+        </div>
+
+        <div class="grid three">
+          <label>Pipe Roughness C-factor / quality
+            <input type="number" id="pipeFactor" value="140" step="1" min="1" />
+          </label>
+          <label>Fittings Count (eq elbows)
+            <input type="number" id="fittingsCount" value="2" step="1" min="0" />
+          </label>
+          <label>Motor Service Factor
+            <input type="number" id="motorServiceFactor" value="1.15" step="0.01" min="1" />
+          </label>
+        </div>
+
+        <div class="actions">
+          <button type="button" id="calcTdhBtn">Calculate TDH from pipe variables</button>
+          <button type="submit">Recommend pump</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="card upload-card">
+      <h2>2. Pump curve library</h2>
+      <p>Upload CSV with columns like: <code>MODEL,ROTOR,FLOW_GPM,HEAD_FT,EFFICIENCY_PCT,POWER_HP</code></p>
+      <input type="file" id="curveFile" accept=".csv" />
+      <div id="libraryStats" class="muted">No curves loaded yet.</div>
+      <div id="curveTableWrap"></div>
+    </section>
+
+    <section class="card recommendation-card">
+      <h2>3. Recommendation</h2>
+      <div id="summaryCards" class="summary-grid"></div>
+      <div id="recommendationBox" class="recommendation empty">Run a recommendation to see results.</div>
+    </section>
+
+    <section class="card chart-card full">
+      <h2>4. Updated operating curve</h2>
+      <svg id="curveChart" viewBox="0 0 900 420" role="img" aria-label="Pump curve chart"></svg>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
