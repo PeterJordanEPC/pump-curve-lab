@@ -102,6 +102,32 @@ function avoidFiveInPumpNote() {
   return 'Avoid 5-in pump when making suggestions';
 }
 
+
+function getWorkflowGuidance(ctx) {
+  const notes = [];
+  if (ctx.pumpType === 'selfpriming') {
+    notes.push('Self-priming workflow: use suction lift in the TDH calculator, keep lift at or below 18 ft preferred, and treat ~24 ft as a practical hard limit.');
+    notes.push('Self-priming suction hose should generally stay around 150 to 200 ft max before the design becomes risky.');
+  }
+  if (ctx.pumpType !== 'selfpriming') {
+    notes.push('Electric / flooded workflow: start from customer flow, TDH, slurry properties, then interpolate the family curve and manually validate motor sizing.');
+  }
+  if (ctx.targetFlowGpm >= 50 && ctx.targetFlowGpm < 200 && ctx.adjustedHeadFt > 120) {
+    notes.push('High-head exception triggered: in the 50 to 200 GPM band with head above 120 ft, prefer HH2000.');
+  }
+  notes.push('Avoid 5-in pump recommendations unless there is a very strong reason to override the standard sizing rule.');
+  notes.push('Use Job/engineering judgment on motor sizing. PumpFlo training showed manual override may be needed after VFD or RPM review.');
+  return notes;
+}
+
+function updateWorkflowGuidance() {
+  const ctx = buildContext();
+  const notes = getWorkflowGuidance(ctx);
+  const box = document.getElementById('workflowGuidance');
+  if (!box) return;
+  box.innerHTML = '<strong>PumpFlo-style workflow guidance:</strong><ul>' + notes.map(n => `<li>${n}</li>`).join('') + '</ul>';
+}
+
 function calcTdh() {
   const staticHead = Number(document.getElementById('staticHead').value || 0);
   const pipeLength = Number(document.getElementById('pipeLength').value || 0);
@@ -163,6 +189,7 @@ function recommend(e) {
     modelCount: uniqueModels(rows).length,
     generalRecommendation: getGeneralPumpRecommendation(ctx.targetFlowGpm, ctx.adjustedHeadFt),
     avoidFiveInPump: avoidFiveInPumpNote(),
+    workflowNotes: getWorkflowGuidance(ctx),
   };
   renderRecommendation();
   drawChart();
@@ -261,6 +288,8 @@ els.loadProjectBtn.addEventListener('click', () => els.projectFile.click());
 els.projectFile.addEventListener('change', e => { const file = e.target.files[0]; if (file) loadProjectFile(file); });
 els.printBtn.addEventListener('click', () => window.print());
 els.familyFilter.addEventListener('change', () => recommend());
+els.appForm.addEventListener('input', updateWorkflowGuidance);
+els.appForm.addEventListener('change', updateWorkflowGuidance);
 els.appForm.addEventListener('submit', recommend);
 els.curveFile.addEventListener('change', async (e) => { const files = [...e.target.files]; if (!files.length) return; const parsed = []; for (const file of files) parsed.push(...parseCsv(await file.text(), file.name)); curveRows = parsed; renderLibrary(); recommend(); });
 curveRows = parseCsv(sampleCsv, 'sample-library'); renderLibrary(); recommend();

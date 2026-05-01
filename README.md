@@ -91,3 +91,11 @@ Open:
 5. NPSH and suction-condition calculator
 6. solids/wear/material selection advisor
 7. deploy preview or hosted staging environment
+
+
+## PumpFlo workflow findings now reflected in the app
+- electric/flooded sizing starts with customer flow, TDH, and slurry properties
+- self-priming mode emphasizes suction lift and warns above the recommended lift range
+- 50 to 200 GPM with head above 120 ft prefers HH2000
+- 5-inch pump recommendations are intentionally discouraged
+- recommendation screen now includes PumpFlo-style workflow guidance and manual-review reminders
