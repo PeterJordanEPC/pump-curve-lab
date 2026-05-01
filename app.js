@@ -988,13 +988,32 @@ function exportCsv() {
   downloadFile('pump-curve-lab-comparison.csv', lines.join('\n'), 'text/csv');
 }
 
+function getChartSvgMarkup() {
+  const svg = els.curveChart;
+  if (!svg || !svg.innerHTML) return '';
+  const clone = svg.cloneNode(true);
+  clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+  clone.setAttribute('width', '980');
+  clone.setAttribute('height', '560');
+  return new XMLSerializer().serializeToString(clone);
+}
+
+function getChartDataUri() {
+  const markup = getChartSvgMarkup();
+  if (!markup) return '';
+  return 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(markup)));
+}
+
 function exportHtml() {
   if (!lastRecommendation) return alert('Run a recommendation first.');
   const r = lastRecommendation;
   const ds = getModeDatasheet(r);
   const rows = r.scored.map(x => `<tr><td>${x.model}</td><td>${x.source}</td><td>${x.rotor}</td><td>${x.dutyFlowGpm.toFixed(0)}</td><td>${x.dutyHeadFt.toFixed(1)}</td><td>${x.dutyEfficiencyPct.toFixed(1)}%</td><td>${x.dutyPowerHp.toFixed(1)}</td><td>${x.recommendedMotorHp}</td><td>${x.score.toFixed(1)}</td></tr>`).join('');
   const dsRows = ds.rows.map(([k,v]) => `<tr><th>${k}</th><td>${v}</td></tr>`).join('');
-  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${ds.title}</title><style>body{font-family:Arial,sans-serif;padding:24px;color:#111}.brand{background:#0f172a;color:#fff;padding:18px 20px;border-radius:10px}table{width:100%;border-collapse:collapse;margin-top:20px}th,td{border:1px solid #ddd;padding:8px;text-align:left}th{background:#f3f4f6}.note{margin-top:16px;padding:12px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px}.section{margin-top:20px}</style></head><body><div class="brand"><h1>${ds.title}</h1><p>${r.projectName} | ${r.projectRef} | ${r.applicationType}</p></div><div class="section"><table><tbody>${dsRows}</tbody></table></div><div class="note">Prototype recommendation only. Verify NPSH, solids handling, wear, materials, and approved manufacturer curve fit before release.${r.modeWarnings.length ? '<ul>' + r.modeWarnings.map(n => `<li>${n}</li>`).join('') + '</ul>' : ''}</div><div class="section"><h2>Top Curve Matches</h2><table><thead><tr><th>Model</th><th>Source</th><th>Rotor</th><th>Op Flow</th><th>Op Head</th><th>Eff</th><th>Pump HP</th><th>Motor HP</th><th>Score</th></tr></thead><tbody>${rows}</tbody></table></div></body></html>`;
+  const chartUri = getChartDataUri();
+  const chartSection = chartUri ? `<div class="section"><h2>Pump Curve</h2><img src="${chartUri}" style="width:100%;max-width:980px;height:auto;border:1px solid #ddd;border-radius:10px" alt="Pump curve diagram" /></div>` : '';
+  const legendHtml = `<div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;font-size:13px;color:#64748b"><span>🔵 Pump curve</span><span>🔴 System curve</span><span>🟣 Efficiency</span><span>🟢 BEP</span><span>⬛ Requested</span><span>🔴 Operating point</span><span>🟩 Preferred range</span></div>`;
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${ds.title}</title><style>body{font-family:Arial,sans-serif;padding:24px;color:#111;max-width:1100px;margin:0 auto}.brand{background:#0f172a;color:#fff;padding:18px 20px;border-radius:10px}table{width:100%;border-collapse:collapse;margin-top:20px}th,td{border:1px solid #ddd;padding:8px;text-align:left}th{background:#f3f4f6}.note{margin-top:16px;padding:12px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px}.section{margin-top:24px;page-break-inside:avoid}@media print{.brand{-webkit-print-color-adjust:exact;print-color-adjust:exact}}</style></head><body><div class="brand"><h1>${ds.title}</h1><p>${r.projectName} | ${r.projectRef} | ${r.applicationType}</p></div><div class="section"><table><tbody>${dsRows}</tbody></table></div>${chartSection}${chartUri ? legendHtml : ''}<div class="note">Verify NPSH, solids handling, wear, materials, and approved manufacturer curve fit before release.${r.modeWarnings.length ? '<ul>' + r.modeWarnings.map(n => `<li>${n}</li>`).join('') + '</ul>' : ''}</div><div class="section"><h2>Top Curve Matches</h2><table><thead><tr><th>Model</th><th>Source</th><th>Rotor</th><th>Op Flow</th><th>Op Head</th><th>Eff</th><th>Pump HP</th><th>Motor HP</th><th>Score</th></tr></thead><tbody>${rows}</tbody></table></div></body></html>`;
   downloadFile(`${ds.title.toLowerCase().replace(/[^a-z0-9]+/g,'-')}.html`, html, 'text/html');
 }
 
