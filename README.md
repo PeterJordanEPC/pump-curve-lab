@@ -124,3 +124,11 @@ Open:
 - flooded-suction/electric workflow now explicitly includes atmospheric pressure and elevation context
 - atmospheric pressure is auto-estimated from elevation in the front end
 - total-head style guidance now references suction/discharge head and tank surface pressure workflow
+
+
+## Mode-specific datasheet output
+- HTML export now changes by workflow mode
+- Electric datasheet includes frequency, RPM, VFD, elevation, and atmospheric pressure
+- Self-Priming datasheet includes suction lift, suction hose length, and tank surface pressure
+- Submersible datasheet includes submergence, cooling method, and cable length
+- Static asset URLs are versioned to force Pages/browser refresh when new code ships

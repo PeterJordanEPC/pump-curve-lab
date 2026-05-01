@@ -313,6 +313,57 @@ function recommend(e) {
   drawChart();
 }
 
+
+function getModeDatasheet(r) {
+  const common = [
+    ['Project', r.projectName || 'Untitled'],
+    ['Reference', r.projectRef || ''],
+    ['Workflow Mode', getModeConfig(r.workflowMode).title],
+    ['Best Pump', r.best.model],
+    ['General Recommendation', r.generalRecommendation],
+    ['Curve Recommendation', r.best.model],
+    ['Target Flow (gpm)', r.targetFlowGpm.toFixed(0)],
+    ['Adjusted TDH (ft)', r.adjustedHeadFt.toFixed(1)],
+    ['Mode Adjusted TDH (ft)', r.modeAdjustedHeadFt.toFixed(1)],
+    ['Specific Gravity', r.sg.toFixed(2)],
+    ['Viscosity (cP)', r.viscosity.toFixed(1)],
+    ['Recommended Motor (HP)', String(r.best.recommendedMotorHp)],
+  ];
+  if (r.workflowMode === 'selfpriming') {
+    return {
+      title: 'Self-Priming Datasheet',
+      rows: common.concat([
+        ['Suction Lift (ft)', r.suctionLift.toFixed(1)],
+        ['Suction Hose Length (ft)', r.suctionHoseLength.toFixed(1)],
+        ['Tank Surface Pressure (psi)', r.tankSurfacePressure.toFixed(1)],
+        ['Guidance', 'Keep suction lift at or below 18 ft preferred, with ~24 ft practical hard warning.']
+      ])
+    };
+  }
+  if (r.workflowMode === 'submersible') {
+    return {
+      title: 'Submersible Datasheet',
+      rows: common.concat([
+        ['Submergence Depth (ft)', r.submergenceDepth.toFixed(1)],
+        ['Cooling Method', r.coolingMethod],
+        ['Power Cable Length (ft)', r.powerCableLength.toFixed(1)],
+        ['Guidance', 'Confirm cooling, submergence stability, and cable voltage drop before release.']
+      ])
+    };
+  }
+  return {
+    title: 'Electric Process Datasheet',
+    rows: common.concat([
+      ['Motor Frequency (Hz)', String(r.motorFrequency)],
+      ['Target RPM', String(r.targetRpm)],
+      ['VFD Used', r.useVfd],
+      ['Elevation (ft)', String(Number(document.getElementById('elevationFt').value || 0).toFixed(0))],
+      ['Atmospheric Pressure (psi)', String(Number(document.getElementById('atmosphericPressure').value || 14.7).toFixed(2))],
+      ['Guidance', 'Manual motor validation is still required, especially when reducing RPM with a VFD.']
+    ])
+  };
+}
+
 function renderRecommendation() {
   const r = lastRecommendation; const best = r.best;
   els.summaryCards.innerHTML = `
@@ -346,6 +397,7 @@ function renderRecommendation() {
     <p><strong>Recommended motor:</strong> ${best.recommendedMotorHp} HP minimum, based on ${best.powerHp.toFixed(1)} pump HP × SG ${r.sg.toFixed(2)} × service factor ${r.serviceFactor.toFixed(2)}.</p>
     <p><strong>Rule reminder:</strong> ${r.avoidFiveInPump}</p>
     <p><strong>Updated curve note:</strong> The plotted operating point includes a fluid-adjusted head penalty for specific gravity, viscosity, and solids burden.</p>
+    <p><strong>Datasheet type:</strong> ${getModeDatasheet(r).title}</p>
     <table class="table">
       <thead><tr><th>Pump</th><th>Rotor</th><th>Flow gpm</th><th>Head ft</th><th>Pump HP</th><th>Motor HP</th><th>Score</th></tr></thead>
       <tbody>${rows}</tbody>
@@ -395,11 +447,11 @@ function renderLibrary() {
 
 function exportJson() { if (!lastRecommendation) return alert('Run a recommendation first.'); downloadFile('pump-curve-lab-report.json', JSON.stringify({ project: getFormValues(), curves: curveRows, recommendation: lastRecommendation }, null, 2), 'application/json'); }
 function exportCsv() { if (!lastRecommendation) return alert('Run a recommendation first.'); const lines = ['MODEL,SOURCE,ROTOR,FLOW_GPM,HEAD_FT,PUMP_HP,MOTOR_HP,SCORE']; lastRecommendation.scored.forEach(r => lines.push([r.model,r.source,r.rotor,r.flowGpm,r.headFt,r.powerHp,r.recommendedMotorHp,r.score.toFixed(1)].join(','))); downloadFile('pump-curve-lab-comparison.csv', lines.join('\n'), 'text/csv'); }
-function exportHtml() { if (!lastRecommendation) return alert('Run a recommendation first.'); const r = lastRecommendation; const rows = r.scored.map(x => `<tr><td>${x.model}</td><td>${x.source}</td><td>${x.rotor}</td><td>${x.flowGpm.toFixed(0)}</td><td>${x.headFt.toFixed(1)}</td><td>${x.powerHp.toFixed(1)}</td><td>${x.recommendedMotorHp}</td><td>${x.score.toFixed(1)}</td></tr>`).join(''); const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Pump Curve Lab Report</title><style>body{font-family:Arial,sans-serif;padding:24px;color:#111} .brand{background:#0f172a;color:#fff;padding:18px 20px;border-radius:10px} table{width:100%;border-collapse:collapse;margin-top:20px}th,td{border:1px solid #ddd;padding:8px;text-align:left}th{background:#f3f4f6}.note{margin-top:16px;padding:12px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px}</style></head><body><div class="brand"><h1>Pump Curve Lab Report</h1><p>${r.projectName} | ${r.projectRef}</p></div><p><strong>Best pump:</strong> ${r.best.model}<br><strong>Target flow:</strong> ${r.targetFlowGpm.toFixed(0)} gpm<br><strong>Adjusted TDH:</strong> ${r.adjustedHeadFt.toFixed(1)} ft<br><strong>Specific gravity:</strong> ${r.sg}<br><strong>Viscosity:</strong> ${r.viscosity} cP<br><strong>Pump type:</strong> ${r.pumpType}<br><strong>Recommended motor:</strong> ${r.best.recommendedMotorHp} HP</p><div class="note">Prototype recommendation only. Verify NPSH, solids handling, wear, materials, and approved manufacturer curve fit before release.</div><table><thead><tr><th>Model</th><th>Source</th><th>Rotor</th><th>Flow gpm</th><th>Head ft</th><th>Pump HP</th><th>Motor HP</th><th>Score</th></tr></thead><tbody>${rows}</tbody></table></body></html>`; downloadFile('pump-curve-lab-report.html', html, 'text/html'); }
+function exportHtml() { if (!lastRecommendation) return alert('Run a recommendation first.'); const r = lastRecommendation; const ds = getModeDatasheet(r); const rows = r.scored.map(x => `<tr><td>${x.model}</td><td>${x.source}</td><td>${x.rotor}</td><td>${x.flowGpm.toFixed(0)}</td><td>${x.headFt.toFixed(1)}</td><td>${x.powerHp.toFixed(1)}</td><td>${x.recommendedMotorHp}</td><td>${x.score.toFixed(1)}</td></tr>`).join(''); const dsRows = ds.rows.map(([k,v]) => `<tr><th>${k}</th><td>${v}</td></tr>`).join(''); const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${ds.title}</title><style>body{font-family:Arial,sans-serif;padding:24px;color:#111} .brand{background:#0f172a;color:#fff;padding:18px 20px;border-radius:10px} table{width:100%;border-collapse:collapse;margin-top:20px}th,td{border:1px solid #ddd;padding:8px;text-align:left}th{background:#f3f4f6}.note{margin-top:16px;padding:12px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px} .section{margin-top:20px}</style></head><body><div class="brand"><h1>${ds.title}</h1><p>${r.projectName} | ${r.projectRef}</p></div><div class="section"><table><tbody>${dsRows}</tbody></table></div><div class="note">Prototype recommendation only. Verify NPSH, solids handling, wear, materials, and approved manufacturer curve fit before release.${r.modeWarnings.length ? '<ul>' + r.modeWarnings.map(n => `<li>${n}</li>`).join('') + '</ul>' : ''}</div><div class="section"><h2>Top Curve Matches</h2><table><thead><tr><th>Model</th><th>Source</th><th>Rotor</th><th>Flow gpm</th><th>Head ft</th><th>Pump HP</th><th>Motor HP</th><th>Score</th></tr></thead><tbody>${rows}</tbody></table></div></body></html>`; downloadFile(`${ds.title.toLowerCase().replace(/[^a-z0-9]+/g,'-')}.html`, html, 'text/html'); }
 function saveProject() { const payload = { project: getFormValues(), curvesCsv: buildCsv(curveRows) }; downloadFile(`${(document.getElementById('projectName').value || 'pump-project').replace(/\s+/g,'-').toLowerCase()}.json`, JSON.stringify(payload, null, 2), 'application/json'); }
 function loadProjectFile(file) { const reader = new FileReader(); reader.onload = () => { const payload = JSON.parse(reader.result); if (payload.project) setFormValues(payload.project); if (payload.curvesCsv) curveRows = parseCsv(payload.curvesCsv, 'project-load'); renderLibrary(); recommend(); }; reader.readAsText(file); }
 
-els.loadSampleBtn.addEventListener('click', () => { curveRows = parseCsv(sampleCsv, 'sample-library'); renderLibrary(); recommend(); });
+els.loadSampleBtn.addEventListener('click', () => { curveRows = parseCsv(sampleCsv, 'sample-library'); renderLibrary(); updateAtmosphericPressureFromElevation(); applyWorkflowModeUI(); updateWorkflowGuidance(); recommend(); });
 els.calcTdhBtn.addEventListener('click', calcTdh);
 els.exportJsonBtn.addEventListener('click', exportJson);
 els.exportCsvBtn.addEventListener('click', exportCsv);
@@ -415,4 +467,4 @@ els.appForm.addEventListener('input', updateWorkflowGuidance);
 els.appForm.addEventListener('change', updateWorkflowGuidance);
 els.appForm.addEventListener('submit', recommend);
 els.curveFile.addEventListener('change', async (e) => { const files = [...e.target.files]; if (!files.length) return; const parsed = []; for (const file of files) parsed.push(...parseCsv(await file.text(), file.name)); curveRows = parsed; renderLibrary(); recommend(); });
-curveRows = parseCsv(sampleCsv, 'sample-library'); renderLibrary(); recommend();
+curveRows = parseCsv(sampleCsv, 'sample-library'); renderLibrary(); updateAtmosphericPressureFromElevation(); applyWorkflowModeUI(); updateWorkflowGuidance(); recommend();
