@@ -510,17 +510,48 @@ function renderRecommendation() {
 function drawChart() {
   const svg = els.curveChart; svg.innerHTML = ''; els.chartLegend.innerHTML = '';
   if (!curveRows.length || !lastRecommendation) return;
-  const rows = activeRows(); const width = 900, height = 420, m = {l:60,r:20,t:20,b:50};
-  const maxFlow = Math.max(...rows.map(d => d.flowGpm), lastRecommendation.targetFlowGpm) * 1.1;
-  const maxHead = Math.max(...rows.map(d => d.headFt), lastRecommendation.adjustedHeadFt) * 1.15;
-  const x = v => m.l + (v / maxFlow) * (width - m.l - m.r); const y = v => height - m.b - (v / maxHead) * (height - m.t - m.b);
+  const rows = activeRows();
+  const width = 980, height = 520, m = {l:88,r:96,t:30,b:72};
+  const maxFlowRaw = Math.max(...rows.map(d => d.flowGpm), lastRecommendation.targetFlowGpm, lastRecommendation.best.flowGpm);
+  const maxHeadRaw = Math.max(...rows.map(d => d.headFt), lastRecommendation.modeAdjustedHeadFt, lastRecommendation.best.headFt);
+  const maxFlow = maxFlowRaw * 1.2;
+  const maxHead = maxHeadRaw * 1.2;
+  const x = v => m.l + (v / maxFlow) * (width - m.l - m.r);
+  const y = v => height - m.b - (v / maxHead) * (height - m.t - m.b);
+  const clamp = (v,min,max) => Math.max(min, Math.min(max, v));
   const models = uniqueModels(rows);
   const make = (tag, attrs={}) => { const el = document.createElementNS('http://www.w3.org/2000/svg', tag); Object.entries(attrs).forEach(([k,v]) => el.setAttribute(k,v)); svg.appendChild(el); return el; };
-  make('line', {x1:m.l,y1:height-m.b,x2:width-m.r,y2:height-m.b,stroke:'#94a3b8'}); make('line', {x1:m.l,y1:m.t,x2:m.l,y2:height-m.b,stroke:'#94a3b8'});
-  for(let i=0;i<6;i++){ const fx = maxFlow*i/5, hy = maxHead*i/5; make('text',{x:x(fx),y:height-m.b+20,'font-size':'12',fill:'#64748b','text-anchor':'middle'}).textContent = fx.toFixed(0); make('text',{x:m.l-8,y:y(hy)+4,'font-size':'12',fill:'#64748b','text-anchor':'end'}).textContent = hy.toFixed(0); if(i<5){ make('line',{x1:x(fx),y1:m.t,x2:x(fx),y2:height-m.b,stroke:'#e2e8f0'}); make('line',{x1:m.l,y1:y(hy),x2:width-m.r,y2:y(hy),stroke:'#e2e8f0'}); } }
-  make('text',{x:width/2,y:height-10,'font-size':'13',fill:'#475569','text-anchor':'middle'}).textContent='Flow (gpm)'; make('text',{x:18,y:height/2,'font-size':'13',fill:'#475569',transform:`rotate(-90 18 ${height/2})`,'text-anchor':'middle'}).textContent='Head (ft)';
-  models.forEach((model, idx) => { const pts = rows.filter(d => d.model === model).sort((a,b)=>a.flowGpm-b.flowGpm); const d = pts.map((p,i)=>`${i?'L':'M'} ${x(p.flowGpm)} ${y(p.headFt)}`).join(' '); const color = colors[idx % colors.length]; make('path',{d,fill:'none',stroke:color,'stroke-width':'2.5'}); const item = document.createElement('div'); item.className = 'legend-item'; item.innerHTML = `<span class="legend-swatch" style="background:${color}"></span>${model}`; els.chartLegend.appendChild(item); });
-  const best = lastRecommendation.best; make('circle',{cx:x(lastRecommendation.targetFlowGpm),cy:y(lastRecommendation.adjustedHeadFt),r:7,fill:'#111827'}); make('text',{x:x(lastRecommendation.targetFlowGpm)+10,y:y(lastRecommendation.adjustedHeadFt)-10,'font-size':'12',fill:'#111827'}).textContent='Requested duty point'; make('circle',{cx:x(best.flowGpm),cy:y(best.headFt),r:7,fill:'#dc2626'}); make('text',{x:x(best.flowGpm)+10,y:y(best.headFt)+16,'font-size':'12',fill:'#dc2626'}).textContent=`${best.model} operating point`;
+  make('rect', {x:0,y:0,width,height,fill:'#ffffff'});
+  make('line', {x1:m.l,y1:height-m.b,x2:width-m.r,y2:height-m.b,stroke:'#94a3b8','stroke-width':'1.2'});
+  make('line', {x1:m.l,y1:m.t,x2:m.l,y2:height-m.b,stroke:'#94a3b8','stroke-width':'1.2'});
+  for(let i=0;i<6;i++){
+    const fx = maxFlow*i/5, hy = maxHead*i/5;
+    const gx = x(fx), gy = y(hy);
+    make('text',{x:gx,y:height-m.b+28,'font-size':'12',fill:'#64748b','text-anchor':'middle'}).textContent = fx.toFixed(0);
+    make('text',{x:m.l-10,y:gy+4,'font-size':'12',fill:'#64748b','text-anchor':'end'}).textContent = hy.toFixed(0);
+    if(i<5){
+      make('line',{x1:gx,y1:m.t,x2:gx,y2:height-m.b,stroke:'#e2e8f0'});
+      make('line',{x1:m.l,y1:gy,x2:width-m.r,y2:gy,stroke:'#e2e8f0'});
+    }
+  }
+  make('text',{x:(width+m.l-m.r)/2,y:height-18,'font-size':'13',fill:'#475569','text-anchor':'middle'}).textContent='Flow (gpm)';
+  make('text',{x:24,y:height/2,'font-size':'13',fill:'#475569',transform:`rotate(-90 24 ${height/2})`,'text-anchor':'middle'}).textContent='Head (ft)';
+  models.forEach((model, idx) => {
+    const pts = rows.filter(d => d.model === model).sort((a,b)=>a.flowGpm-b.flowGpm);
+    const d = pts.map((p,i)=>`${i?'L':'M'} ${x(p.flowGpm)} ${y(p.headFt)}`).join(' ');
+    const color = colors[idx % colors.length];
+    make('path',{d,fill:'none',stroke:color,'stroke-width':'3','stroke-linecap':'round'});
+    const item = document.createElement('div'); item.className = 'legend-item'; item.innerHTML = `<span class="legend-swatch" style="background:${color}"></span>${model}`; els.chartLegend.appendChild(item);
+  });
+  const best = lastRecommendation.best;
+  const requestedX = x(lastRecommendation.targetFlowGpm), requestedY = y(lastRecommendation.modeAdjustedHeadFt);
+  const bestX = x(best.flowGpm), bestY = y(best.headFt);
+  make('circle',{cx:requestedX,cy:requestedY,r:8,fill:'#111827'});
+  const requestedLabel = make('text',{x:clamp(requestedX+14, m.l+20, width-m.r-110),y:clamp(requestedY-12, m.t+18, height-m.b-12),'font-size':'12',fill:'#111827'});
+  requestedLabel.textContent='Requested duty point';
+  make('circle',{cx:bestX,cy:bestY,r:8,fill:'#dc2626'});
+  const bestLabel = make('text',{x:clamp(bestX+14, m.l+20, width-m.r-160),y:clamp(bestY+18, m.t+18, height-m.b-12),'font-size':'12',fill:'#dc2626'});
+  bestLabel.textContent=`${best.model} operating point`;
 }
 
 function renderLibrary() {

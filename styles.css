@@ -118,3 +118,7 @@ code { background:#f1f5f9; padding:2px 6px; border-radius:8px; }
 
 .lean-grid, .quick-mode-fields { margin-bottom: 12px; }
 .quick-mode-group { background:#f8fbff; border:1px solid var(--line); border-radius:14px; padding:14px; }
+
+.chart-frame { background:#fff; border:1px solid var(--line); border-radius:16px; padding:12px; overflow:hidden; }
+svg { border:none; border-radius:12px; display:block; }
+.chart-card { overflow:hidden; }
