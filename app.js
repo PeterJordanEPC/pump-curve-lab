@@ -25,7 +25,7 @@ const els = {
   appForm: document.getElementById('appForm'),
   familyFilter: document.getElementById('familyFilter'),
 };
-const fieldIds = ['projectName','projectRef','flowRate','flowUnit','headValue','headUnit','workflowMode','pumpType','specificGravity','viscosity','staticHead','pipeLength','pipeDiameter','pipeFactor','fittingsCount','motorServiceFactor','solidsSize','fluidTemp','materialPreference','motorFrequency','targetRpm','useVfd','suctionLift','suctionHoseLength','tankSurfacePressure','submergenceDepth','coolingMethod','powerCableLength'];
+const fieldIds = ['projectName','projectRef','flowRate','flowUnit','headValue','headUnit','workflowMode','pumpType','specificGravity','viscosity','staticHead','pipeLength','pipeDiameter','elevationFt','atmosphericPressure','pipeFactor','fittingsCount','motorServiceFactor','solidsSize','fluidTemp','materialPreference','motorFrequency','targetRpm','useVfd','suctionLift','suctionHoseLength','tankSurfacePressure','submergenceDepth','coolingMethod','powerCableLength'];
 
 function parseCsv(text, sourceName='uploaded') {
   const lines = text.trim().split(/\r?\n/).filter(Boolean);
@@ -120,6 +120,13 @@ function applyWorkflowModeUI() {
     if (mode === 'submersible') pumpType.value = 'submersible';
     if (mode === 'electric' && pumpType.value === 'selfpriming') pumpType.value = 'flooded';
   }
+}
+
+
+function updateAtmosphericPressureFromElevation() {
+  const elevationFt = Number(document.getElementById('elevationFt').value || 0);
+  const atm = 14.7 * Math.pow(1 - 6.8754e-6 * elevationFt, 5.2559);
+  document.getElementById('atmosphericPressure').value = Math.max(atm, 0).toFixed(2);
 }
 
 function getModeConfig(mode) {
@@ -222,6 +229,7 @@ function calcTdh() {
   const pipeDiameter = Number(document.getElementById('pipeDiameter').value || 0);
   const fittingsCount = Number(document.getElementById('fittingsCount').value || 0);
   const pipeFactor = Number(document.getElementById('pipeFactor').value || 140);
+  const atmosphericPressure = Number(document.getElementById('atmosphericPressure').value || 14.7);
   const flowRate = toGpm(Number(document.getElementById('flowRate').value || 0), document.getElementById('flowUnit').value);
   const sg = Number(document.getElementById('specificGravity').value || 1);
   const viscosity = Number(document.getElementById('viscosity').value || 1);
@@ -229,7 +237,8 @@ function calcTdh() {
   const frictionBase = equivalentLength * Math.pow(Math.max(flowRate, 1) / 1000, 1.85) / Math.pow(Math.max(pipeFactor, 1), 1.85) / Math.pow(Math.max(pipeDiameter, 0.25), 4.87) * 12;
   const viscosityFactor = 1 + Math.max(0, viscosity - 1) * 0.0025;
   const sgFactor = 0.98 + (sg - 1) * 0.2;
-  const tdhFt = staticHead + (frictionBase * viscosityFactor * sgFactor);
+  const atmosphericFactor = Math.max(0.85, atmosphericPressure / 14.7);
+  const tdhFt = staticHead + (frictionBase * viscosityFactor * sgFactor / atmosphericFactor);
   document.getElementById('headValue').value = fromFeetHead(tdhFt, document.getElementById('headUnit').value, sg).toFixed(2);
   return tdhFt;
 }
@@ -401,6 +410,7 @@ els.projectFile.addEventListener('change', e => { const file = e.target.files[0]
 els.printBtn.addEventListener('click', () => window.print());
 els.familyFilter.addEventListener('change', () => recommend());
 document.getElementById('workflowMode').addEventListener('change', () => { applyWorkflowModeUI(); updateWorkflowGuidance(); });
+document.getElementById('elevationFt').addEventListener('input', updateAtmosphericPressureFromElevation);
 els.appForm.addEventListener('input', updateWorkflowGuidance);
 els.appForm.addEventListener('change', updateWorkflowGuidance);
 els.appForm.addEventListener('submit', recommend);

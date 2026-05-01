@@ -118,3 +118,9 @@ Open:
 - electric mode now reflects VFD / reduced-RPM motor-sizing caution more directly
 - submersible mode now adds submergence, cooling, and cable-length warnings
 - recommendation now shows both adjusted TDH and mode-adjusted TDH
+
+
+## Additional Pump Flow tutorial behaviors applied
+- flooded-suction/electric workflow now explicitly includes atmospheric pressure and elevation context
+- atmospheric pressure is auto-estimated from elevation in the front end
+- total-head style guidance now references suction/discharge head and tank surface pressure workflow
