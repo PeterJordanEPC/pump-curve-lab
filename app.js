@@ -402,15 +402,26 @@ function getModeDatasheet(r) {
 
 function renderRecommendation() {
   const r = lastRecommendation; const best = r.best;
+  const warnings = r.modeWarnings || [];
   els.summaryCards.innerHTML = `
-    <div class="tile"><div class="k">Target Flow</div><div class="v">${r.targetFlowGpm.toFixed(0)} gpm</div></div>
-    <div class="tile"><div class="k">Adjusted TDH</div><div class="v">${r.adjustedHeadFt.toFixed(1)} ft</div></div>
-    <div class="tile"><div class="k">Mode Adjusted TDH</div><div class="v">${r.modeAdjustedHeadFt.toFixed(1)} ft</div></div>
-    <div class="tile"><div class="k">Curve-Based Recommendation</div><div class="v">${best.model}</div></div>
-    <div class="tile"><div class="k">Recommended Motor</div><div class="v">${best.recommendedMotorHp} HP</div></div>
-    <div class="tile"><div class="k">General Recommendation</div><div class="v">${r.generalRecommendation}</div></div>
-    <div class="tile"><div class="k">Sizing Rule</div><div class="v">${r.avoidFiveInPump}</div></div>`;
-  const rows = r.scored.slice(0, 8).map((row, idx) => `
+    <div class="executive-summary">
+      <div class="exec-hero">
+        <div class="exec-eyebrow">Recommended pump</div>
+        <div class="exec-title">${best.model}</div>
+        <p class="exec-sub">${getModeConfig(r.workflowMode).title} mode, ${r.targetFlowGpm.toFixed(0)} gpm target, ${r.modeAdjustedHeadFt.toFixed(1)} ft mode-adjusted TDH.</p>
+        <div class="result-actions">
+          <button type="button" class="primary" id="inlineExportHtmlBtn">Export datasheet</button>
+          <button type="button" class="secondary" id="inlinePrintBtn">Print / Save PDF</button>
+        </div>
+      </div>
+      <div class="exec-metrics">
+        <div class="exec-metric"><div class="k">Recommended motor</div><div class="v">${best.recommendedMotorHp} HP</div></div>
+        <div class="exec-metric"><div class="k">General size band</div><div class="v">${r.generalRecommendation}</div></div>
+        <div class="exec-metric"><div class="k">Rotor</div><div class="v">${best.rotor || 'TBD'}</div></div>
+        <div class="exec-metric"><div class="k">Fit score</div><div class="v">${best.score.toFixed(1)}</div></div>
+      </div>
+    </div>`;
+  const rows = r.scored.slice(0, 5).map((row, idx) => `
     <tr>
       <td>${idx === 0 ? '<span class="badge">Best Fit</span> ' : ''}${row.model}</td>
       <td>${row.rotor}</td>
@@ -422,22 +433,21 @@ function renderRecommendation() {
     </tr>`).join('');
   els.recommendationBox.className = 'recommendation';
   els.recommendationBox.innerHTML = `
-    <h3>Recommendation summary</h3>
-    <div class="notice">Prototype output only. Final engineering release should still confirm NPSH, solids handling, wear, and manufacturer-approved curve suitability.</div>
-    <p><strong>Project:</strong> ${r.projectName} <br><strong>Reference:</strong> ${r.projectRef}</p>
-    <p><strong>Workflow mode:</strong> ${getModeConfig(r.workflowMode).title}</p>
-    <p><strong>General recommendation:</strong> ${r.generalRecommendation}</p>
-    <p><strong>Curve-based recommendation:</strong> ${best.model}</p>
-    <p><strong>Mode-adjusted TDH:</strong> ${r.modeAdjustedHeadFt.toFixed(1)} ft</p>
-    <p><strong>Why:</strong> The general recommendation follows your size-band rules. The curve-based recommendation is the best interpolated family match for target flow, adjusted head, fluid penalty, pump type, and motor service factor.</p>
-    <p><strong>Recommended motor:</strong> ${best.recommendedMotorHp} HP minimum, based on ${best.powerHp.toFixed(1)} pump HP × SG ${r.sg.toFixed(2)} × service factor ${r.serviceFactor.toFixed(2)}.</p>
-    <p><strong>Rule reminder:</strong> ${r.avoidFiveInPump}</p>
-    <p><strong>Updated curve note:</strong> The plotted operating point includes a fluid-adjusted head penalty for specific gravity, viscosity, and solids burden.</p>
-    <p><strong>Datasheet type:</strong> ${getModeDatasheet(r).title}</p>
-    <table class="table">
-      <thead><tr><th>Pump</th><th>Rotor</th><th>Flow gpm</th><th>Head ft</th><th>Pump HP</th><th>Motor HP</th><th>Score</th></tr></thead>
-      <tbody>${rows}</tbody>
-    </table>`;
+    <div class="supporting-grid">
+      <div class="result-note">
+        <strong>Project:</strong> ${r.projectName} <br><strong>Reference:</strong> ${r.projectRef}<br>
+        <strong>Workflow mode:</strong> ${getModeConfig(r.workflowMode).title}<br>
+        <strong>Why this pump:</strong> Best interpolated fit for the requested duty point, fluid penalty, and workflow-specific rules.
+      </div>
+      ${warnings.length ? `<div class="notice"><strong>Key warnings</strong><ul class="warning-list">${warnings.map(n => `<li>${n}</li>`).join('')}</ul></div>` : ''}
+      <div class="result-note">
+        <strong>Engineering note:</strong> ${r.avoidFiveInPump}. Final release should still confirm NPSH, solids handling, wear, and manufacturer-approved curve suitability.
+      </div>
+      <table class="table">
+        <thead><tr><th>Pump</th><th>Rotor</th><th>Flow gpm</th><th>Head ft</th><th>Pump HP</th><th>Motor HP</th><th>Score</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
   const compareRows = r.scored.slice(0,5).map(row => `
     <tr>
       <td>${row.model}</td>
@@ -451,9 +461,10 @@ function renderRecommendation() {
     </tr>`).join('');
   els.comparisonWrap.className = 'recommendation';
   els.comparisonWrap.innerHTML = `
-    <p><strong>General recommendation:</strong> ${r.generalRecommendation}</p>
-    <p><strong>Top curve-based match:</strong> ${best.model}</p>
+    <p><strong>Top alternatives:</strong> Compare the leading candidates without cluttering the main recommendation.</p>
     <table class="table"><thead><tr><th>Model</th><th>Source</th><th>Rotor</th><th>Interpolated Flow</th><th>Interpolated Head</th><th>Flow Error</th><th>Head Error</th><th>Score</th></tr></thead><tbody>${compareRows}</tbody></table>`;
+  document.getElementById('inlineExportHtmlBtn')?.addEventListener('click', exportHtml);
+  document.getElementById('inlinePrintBtn')?.addEventListener('click', () => window.print());
 }
 
 function drawChart() {
