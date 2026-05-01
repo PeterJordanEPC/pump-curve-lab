@@ -221,7 +221,16 @@ function downloadFile(name, content, type) {
   URL.revokeObjectURL(url);
 }
 function uniqueModels(rows) { return [...new Set(rows.map(r => r.model))].sort(); }
-function activeRows() { const filter = els.familyFilter.value; return filter === 'all' ? curveRows : curveRows.filter(r => r.model === filter); }
+function activeRows() {
+  const filter = els.familyFilter.value;
+  if (filter !== 'all') return curveRows.filter(r => r.model === filter);
+  // When "all" is selected, exclude 5-in models unless user explicitly loaded them via CSV
+  return curveRows.filter(r => {
+    const isFiveIn = /5[\s-]?in/i.test(r.rotor) || /5[\s-]?in/i.test(r.model);
+    if (isFiveIn && r.source === 'default-library') return false;
+    return true;
+  });
+}
 function updateFamilyFilter() {
   const current = els.familyFilter.value;
   const models = uniqueModels(curveRows);
@@ -623,8 +632,9 @@ function scoreCandidate(curvePoint, ctx, familyRows, operatingPoint) {
   // ── SIZE-BAND BONUS — strongly prefer the model that matches the lead rule
   const preferredModel = recommendedModelForBand(ctx.targetFlowGpm, ctx.modeAdjustedHeadFt);
   const sizeBandBonus = (preferredModel && curvePoint.model === preferredModel) ? 0.20 : 0;
-  // Penalise 5-in models if they ever appear via CSV upload
-  const fiveInPenalty = /5[\s-]?in/i.test(curvePoint.rotor) || /5[\s-]?in/i.test(curvePoint.model) ? 0.40 : 0;
+  // Hard-penalise any 5-in model — only usable if someone deliberately filters to it
+  const isFiveIn = /5[\s-]?in/i.test(curvePoint.rotor) || /5[\s-]?in/i.test(curvePoint.model);
+  const fiveInPenalty = isFiveIn ? 0.60 : 0;
 
   let bepPenalty = 0;
   let porBand = null;
@@ -1008,7 +1018,15 @@ els.useDefaultLibraryBtn.addEventListener('click', () => {
   updateAutoRunStatus();
 });
 els.showLibraryToolsBtn.addEventListener('click', () => { if (els.libraryToolsPanel) els.libraryToolsPanel.open = true; els.libraryToolsPanel?.scrollIntoView({ behavior: 'smooth', block: 'start' }); });
-els.calcTdhBtn.addEventListener('click', calcTdh);
+els.calcTdhBtn.addEventListener('click', () => { calcTdh(); queueAutoRecommend('TDH calculated'); });
+// If head field is clicked while empty, hint the TDH calculator
+$('headValue')?.addEventListener('focus', () => {
+  const val = $('headValue').value;
+  if (!val || val === '0') {
+    const panel = $('tdhCalcPanel');
+    if (panel && !panel.open) { panel.open = true; panel.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+  }
+});
 els.exportJsonBtn.addEventListener('click', exportJson);
 els.exportCsvBtn.addEventListener('click', exportCsv);
 els.exportHtmlBtn.addEventListener('click', exportHtml);
@@ -1018,6 +1036,13 @@ els.projectFile.addEventListener('change', e => { const file = e.target.files[0]
 els.printBtn.addEventListener('click', () => window.print());
 els.familyFilter.addEventListener('change', () => recommend());
 $('workflowMode').addEventListener('change', () => { applyWorkflowModeUI(); updateWorkflowGuidance(); validateCoreInputs(); queueAutoRecommend('workflow mode change'); });
+// Auto-open slurry panel for dredging applications
+const appTypeEl = $('applicationType');
+if (appTypeEl) appTypeEl.addEventListener('change', () => {
+  const panel = $('slurryPanel');
+  if (panel && appTypeEl.value === 'Dredging') panel.open = true;
+  queueAutoRecommend('application type');
+});
 $('elevationFt').addEventListener('input', () => { updateAtmosphericPressureFromElevation(); queueAutoRecommend('elevation update'); });
 els.appForm.addEventListener('input', e => { if (autoRunFieldSet.has(e.target.id)) { validateCoreInputs(); updateWorkflowGuidance(); queueAutoRecommend(e.target.id); } });
 els.appForm.addEventListener('change', e => { if (autoRunFieldSet.has(e.target.id)) { validateCoreInputs(); updateWorkflowGuidance(); queueAutoRecommend(e.target.id); } });

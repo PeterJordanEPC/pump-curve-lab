@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Pump Curve Lab</title>
-  <link rel="stylesheet" href="styles.css?v=20260501k" />
+  <link rel="stylesheet" href="styles.css?v=20260501m" />
 </head>
 <body>
   <header class="hero">
@@ -65,8 +65,8 @@
                 <option value="lps">L/s</option>
               </select>
             </label>
-            <label>Head
-              <input type="number" id="headValue" value="30" step="any" min="0" />
+            <label>Head <span class="hint">(or use TDH calculator below)</span>
+              <input type="number" id="headValue" value="30" step="any" min="0" placeholder="Leave blank to calculate" />
             </label>
             <label>Head Unit
               <select id="headUnit">
@@ -120,8 +120,8 @@
 
         <div id="workflowGuidance" class="notice"></div>
 
-        <details class="advanced-panel">
-          <summary>Hydraulic inputs</summary>
+        <details class="advanced-panel" id="tdhCalcPanel">
+          <summary>📐 TDH Calculator — Don't know your head? Calculate it here</summary>
           <div id="commonHydraulicInputs" class="grid three inside-panel">
             <label>Static Lift / Head
               <input type="number" id="staticHead" value="30" step="any" min="0" />
@@ -150,8 +150,8 @@
           </div>
         </details>
 
-        <details class="advanced-panel">
-          <summary>Fluid and material details</summary>
+        <details class="advanced-panel" id="slurryPanel">
+          <summary>🧪 Slurry & material properties</summary>
           <div id="commonFluidInputs" class="grid three inside-panel">
             <label>Solids Size (in)
               <input type="number" id="solidsSize" value="0.5" step="0.1" min="0" />
@@ -319,6 +319,6 @@
     </section>
   </main>
 
-  <script src="app.js?v=20260501k"></script>
+  <script src="app.js?v=20260501m"></script>
 </body>
 </html>

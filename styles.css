@@ -121,6 +121,7 @@ label {
   min-width: 0;
   overflow-wrap: break-word;
 }
+label .hint { font-weight: 400; color: var(--accent); font-size: 12px; }
 input, select {
   border: 1px solid var(--line);
   border-radius: 12px;
