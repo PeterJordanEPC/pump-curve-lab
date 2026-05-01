@@ -4,61 +4,56 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Pump Curve Lab</title>
-  <link rel="stylesheet" href="styles.css?v=20260501j" />
+  <link rel="stylesheet" href="styles.css?v=20260501k" />
 </head>
 <body>
   <header class="hero">
     <div class="hero-copy">
-      <span class="eyebrow">Pump recommendation workflow</span>
+      <span class="eyebrow">EDDY Pump lead screening</span>
       <h1>Pump Curve Lab</h1>
-      <p>Enter the project details, let the app calculate the duty point, then get a recommended pump and updated operating curve.</p>
-      <div class="hero-chips">
-        <span class="chip">1. Enter project details</span>
-        <span class="chip">2. Recommend pump</span>
-        <span class="chip">3. Review curve and export</span>
-      </div>
     </div>
     <div class="hero-actions">
-      <button id="useDefaultLibraryBtn">Use default Eddy library</button>
-      <button id="saveProjectBtn">Save project</button>
-      <button id="loadProjectBtn">Load project</button>
+      <button id="useDefaultLibraryBtn" type="button">Use default Eddy library</button>
+      <button id="saveProjectBtn" type="button">Save project</button>
+      <button id="loadProjectBtn" type="button">Load project</button>
       <input type="file" id="projectFile" accept=".json" hidden />
-      <button id="printBtn">Print / Save PDF</button>
+      <button id="printBtn" type="button">Print / Save PDF</button>
     </div>
   </header>
 
   <main class="layout streamlined-layout">
-    <section class="card form-card main-form-card">
+    <section class="card form-card main-form-card" id="formCard">
       <div class="section-head">
         <div>
-          <h2>Project details</h2>
-          <p>Keep the front end simple. Start with the job details and required duty point, then add extra engineering inputs only if needed.</p>
+          <h2>Project intake</h2>
+          <p>Enter the duty point, review the lead recommendation, then refine only if needed.</p>
         </div>
-        <div class="pill">Main input flow</div>
+        <div class="pill">Lead workflow</div>
       </div>
 
       <form id="appForm">
-        <div class="lead-intro-panel">
-          <div>
-            <p class="mini-label">Lead intake flow</p>
-            <h3>Start with the project duty point</h3>
-            <p class="muted">A lead should be able to enter flow and head fast, then see the recommended pump size, likely model, and a clean curve without digging through engineering-only inputs.</p>
-          </div>
-          <div class="lead-intro-badges">
-            <span class="mini-stat">Fast lead screening</span>
-            <span class="mini-stat">Pump size logic built in</span>
-            <span class="mini-stat">Avoid 5-in suggestions</span>
-          </div>
-        </div>
-
-        <div class="form-section compact-top-section">
-          <h3>Project + duty point</h3>
+        <div class="form-section">
           <div class="grid two top-core-grid">
             <label>Project Name
               <input type="text" id="projectName" value="Pump Curve Review" placeholder="Customer or project name" />
             </label>
-            <label>Customer / Project Ref
-              <input type="text" id="projectRef" value="Internal Test" placeholder="Quote, job, or internal reference" />
+            <label>Customer Ref
+              <input type="text" id="projectRef" value="Internal Test" placeholder="Quote, job, or internal ref" />
+            </label>
+            <label>Application Type
+              <select id="applicationType">
+                <option value="Pumping">Pumping</option>
+                <option value="Dredging">Dredging</option>
+                <option value="Dewatering">Dewatering</option>
+                <option value="Process">Process</option>
+              </select>
+            </label>
+            <label>Workflow Mode
+              <select id="workflowMode">
+                <option value="electric">Electric Process</option>
+                <option value="selfpriming">Self-Priming</option>
+                <option value="submersible">Submersible</option>
+              </select>
             </label>
             <label>Flow Rate
               <input type="number" id="flowRate" value="2200" step="any" min="0" />
@@ -70,7 +65,7 @@
                 <option value="lps">L/s</option>
               </select>
             </label>
-            <label>Head / Pressure Value
+            <label>Head
               <input type="number" id="headValue" value="30" step="any" min="0" />
             </label>
             <label>Head Unit
@@ -81,56 +76,48 @@
                 <option value="bar">bar</option>
               </select>
             </label>
-          </div>
-        </div>
-
-        <div class="form-section compact-mode-row">
-          <div class="grid two lean-grid">
-            <label>Workflow Mode
-              <select id="workflowMode">
-                <option value="electric">Electric Process</option>
-                <option value="selfpriming">Self-Priming</option>
-                <option value="submersible">Submersible</option>
-              </select>
-            </label>
             <label>Specific Gravity
               <input type="number" id="specificGravity" value="1" step="0.01" min="0.1" />
             </label>
           </div>
         </div>
 
-        <div id="quickModeFields" class="quick-mode-fields">
-          <div id="quickElectricFields" class="grid two quick-mode-group">
-            <label>Target Operating RPM
-              <input type="number" id="targetRpm" value="1400" step="1" min="100" />
-            </label>
-            <label>Use VFD?
-              <select id="useVfd">
-                <option value="yes">Yes</option>
-                <option value="no">No</option>
-              </select>
-            </label>
-          </div>
-          <div id="quickSelfPrimingFields" class="grid two quick-mode-group hidden">
-            <label>Suction Lift (ft)
-              <input type="number" id="suctionLift" value="16" step="any" min="0" />
-            </label>
-            <label>Suction Hose Length (ft)
-              <input type="number" id="suctionHoseLength" value="100" step="any" min="0" />
-            </label>
-          </div>
-          <div id="quickSubmersibleFields" class="grid two quick-mode-group hidden">
-            <label>Submergence Depth (ft)
-              <input type="number" id="submergenceDepth" value="10" step="any" min="0" />
-            </label>
-            <label>Power Cable Length (ft)
-              <input type="number" id="powerCableLength" value="50" step="any" min="0" />
-            </label>
+        <div id="validationSummary" class="notice validation-summary hidden"></div>
+        <div id="leadRecommendationBand" class="lead-recommendation-band"></div>
+
+        <div class="form-section">
+          <h3>Mode-specific quick fields</h3>
+          <div id="quickModeFields" class="quick-mode-fields">
+            <div id="quickElectricFields" class="grid two quick-mode-group">
+              <label>Target Operating RPM
+                <input type="number" id="targetRpm" value="1400" step="1" min="100" />
+              </label>
+              <label>Use VFD?
+                <select id="useVfd">
+                  <option value="yes">Yes</option>
+                  <option value="no">No</option>
+                </select>
+              </label>
+            </div>
+            <div id="quickSelfPrimingFields" class="grid two quick-mode-group hidden">
+              <label>Suction Lift (ft)
+                <input type="number" id="suctionLift" value="16" step="any" min="0" />
+              </label>
+              <label>Suction Hose Length (ft)
+                <input type="number" id="suctionHoseLength" value="100" step="any" min="0" />
+              </label>
+            </div>
+            <div id="quickSubmersibleFields" class="grid two quick-mode-group hidden">
+              <label>Submergence Depth (ft)
+                <input type="number" id="submergenceDepth" value="10" step="any" min="0" />
+              </label>
+              <label>Power Cable Length (ft)
+                <input type="number" id="powerCableLength" value="50" step="any" min="0" />
+              </label>
+            </div>
           </div>
         </div>
 
-        <div id="validationSummary" class="notice validation-summary hidden"></div>
-        <div id="leadRecommendationBand" class="lead-recommendation-band"></div>
         <div id="workflowGuidance" class="notice"></div>
 
         <details class="advanced-panel">
@@ -158,7 +145,7 @@
               <input type="number" id="fittingsCount" value="2" step="1" min="0" />
             </label>
           </div>
-          <div class="actions inline-actions">
+          <div class="actions inline-actions inside-panel no-top-pad">
             <button type="button" id="calcTdhBtn">Calculate TDH from pipe variables</button>
           </div>
         </details>
@@ -204,7 +191,7 @@
             </label>
           </div>
 
-          <div id="electricModeFields" class="grid three mode-group inside-panel">
+          <div id="electricModeFields" class="grid three mode-group inside-panel no-top-pad">
             <label>Base Motor Frequency
               <select id="motorFrequency">
                 <option value="60">60 Hz</option>
@@ -223,7 +210,7 @@
             </label>
           </div>
 
-          <div id="selfPrimingModeFields" class="grid three mode-group hidden inside-panel">
+          <div id="selfPrimingModeFields" class="grid three mode-group hidden inside-panel no-top-pad">
             <label>Tank Surface Pressure (psi)
               <input type="number" id="tankSurfacePressure" value="1" step="any" />
             </label>
@@ -237,7 +224,7 @@
             </label>
           </div>
 
-          <div id="submersibleModeFields" class="grid three mode-group hidden inside-panel">
+          <div id="submersibleModeFields" class="grid three mode-group hidden inside-panel no-top-pad">
             <label>Motor Cooling Method
               <select id="coolingMethod">
                 <option value="flooded">Flooded / ambient</option>
@@ -258,7 +245,7 @@
         <div class="card-lite default-library-banner">
           <div>
             <strong>Default Eddy curve library active</strong>
-            <p class="muted">Normal users can stay in the simple flow. Manual CSV uploads are still available under advanced library tools.</p>
+            <p class="muted">CSV upload, filtering, save/load, export, and print tools are still available.</p>
           </div>
           <button type="button" id="showLibraryToolsBtn">Advanced library tools</button>
         </div>
@@ -266,7 +253,7 @@
         <details class="advanced-panel" id="libraryToolsPanel">
           <summary>Advanced library tools</summary>
           <div class="inside-panel">
-            <p class="muted top-gap-sm">Upload one or more CSV files with columns like: <code>MODEL,ROTOR,FLOW_GPM,HEAD_FT,EFFICIENCY_PCT,POWER_HP</code></p>
+            <p class="muted">Upload one or more CSV files with columns like <code>MODEL,ROTOR,FLOW_GPM,HEAD_FT,EFFICIENCY_PCT,POWER_HP</code>.</p>
             <input type="file" id="curveFile" accept=".csv" multiple />
             <div class="inline-tools top-gap-sm">
               <label>Filter family / model
@@ -283,7 +270,7 @@
 
         <div id="modeChecklist" class="notice subtle-notice"></div>
 
-        <div class="actions primary-actions sticky-actions">
+        <div class="actions primary-actions sticky-actions" id="stickyActions">
           <button type="submit">Recommend pump</button>
           <button type="button" id="exportHtmlBtn">Export HTML report</button>
           <button type="button" id="exportCsvBtn">Export CSV</button>
@@ -292,42 +279,46 @@
       </form>
     </section>
 
-    <section class="card recommendation-card result-card">
-      <div class="section-head">
-        <div>
-          <h2>Recommendation</h2>
-          <p>The goal is simple: recommend the best fit pump and show the updated curve clearly.</p>
+    <section class="results-column">
+      <section class="card recommendation-card result-card">
+        <div class="section-head">
+          <div>
+            <h2>Recommendation</h2>
+            <p>Executive summary first, engineering detail second.</p>
+          </div>
+          <div class="pill success-pill">Live result</div>
         </div>
-        <div class="pill success-pill">Live result</div>
-      </div>
-      <div id="summaryCards" class="summary-grid"></div>
-      <div id="recommendationBox" class="recommendation empty">Run a recommendation to see results.</div>
-    </section>
+        <div id="summaryCards" class="summary-grid"></div>
+        <div id="recommendationBox" class="recommendation empty">Run a recommendation to see results.</div>
+      </section>
 
-    <section class="card chart-card full">
-      <div class="section-head">
-        <div>
-          <h2>Updated operating curve</h2>
-          <p>See the requested duty point against the recommended operating point.</p>
+      <section class="card chart-card full">
+        <div class="section-head">
+          <div>
+            <h2>Pump curve</h2>
+            <p>Requested duty point, operating point, and preferred range on one clean view.</p>
+          </div>
         </div>
-      </div>
-      <div class="chart-frame"><svg id="curveChart" viewBox="0 0 980 520" role="img" aria-label="Pump curve chart"></svg></div>
-      <div id="chartLegend" class="legend"></div>
-    </section>
+        <div class="chart-frame">
+          <svg id="curveChart" viewBox="0 0 980 560" role="img" aria-label="Pump curve chart"></svg>
+        </div>
+        <div id="chartLegend" class="legend"></div>
+      </section>
 
-    <section class="card comparison-card full">
-      <div class="section-head">
-        <div>
-          <h2>Top pump comparison</h2>
-          <p>Useful for internal review without crowding the main recommendation.</p>
+      <section class="card comparison-card full">
+        <div class="section-head">
+          <div>
+            <h2>Top pump comparison</h2>
+            <p>Internal comparison without cluttering the lead-facing recommendation.</p>
+          </div>
         </div>
-      </div>
-      <div class="table-scroll-wrap">
-        <div id="comparisonWrap" class="recommendation empty">Top recommendations will appear here.</div>
-      </div>
+        <div class="table-scroll-wrap">
+          <div id="comparisonWrap" class="recommendation empty">Top recommendations will appear here.</div>
+        </div>
+      </section>
     </section>
   </main>
 
-  <script src="app.js?v=20260501j"></script>
+  <script src="app.js?v=20260501k"></script>
 </body>
 </html>
