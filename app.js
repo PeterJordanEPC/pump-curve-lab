@@ -70,6 +70,19 @@ HD12000,14 inch,5500,102,28,540.0
 HD12000,14 inch,6500,68,26,660.0
 HD12000,14 inch,7300,35,18,780.0`;
 
+// ── Product family info (descriptions & family names) ────────────────
+const PRODUCT_FAMILY_INFO = {
+  'HD1000':  { family: 'Submersible / Self-Priming Slurry Pump', desc: '1-inch submersible or self-priming slurry pump for low-flow applications' },
+  'HD2000':  { family: 'Heavy-Duty Slurry Pump',                desc: '2-inch heavy-duty slurry pump for moderate flow with high solids handling' },
+  'HH2000':  { family: 'High-Head Slurry Pump',                 desc: '2-inch high-head slurry pump for applications requiring 120+ ft TDH' },
+  'HD3000':  { family: 'Slurry Pump',                           desc: '3-inch slurry pump for mid-range industrial and dredging applications' },
+  'HD4000':  { family: 'Heavy-Duty Slurry Pump',                desc: '4-inch heavy-duty pump for high-volume slurry and dredging operations' },
+  'HD6000':  { family: 'Large-Scale Slurry Pump',               desc: '6-inch pump for large-scale dredging, mining, and industrial transfer' },
+  'HD8000':  { family: 'Heavy Production Slurry Pump',          desc: '8-inch pump for major dredging and high-production slurry operations' },
+  'HD10000': { family: 'Large Dredge / Industrial Pump',        desc: '10-inch pump for large dredging projects and heavy industrial applications' },
+  'HD12000': { family: 'Ultra-Large Slurry Pump',               desc: '12-inch pump for the largest dredging and high-volume transfer projects' },
+};
+
 // ── Size-band mapping (used for scoring bonus) ─────────────────────
 const sizeBandMap = {
   'HD1000': [1, 200],
@@ -115,7 +128,6 @@ const els = {
   curveChart: $('curveChart'),
   chartLegend: $('chartLegend'),
   useDefaultLibraryBtn: $('useDefaultLibraryBtn'),
-  showLibraryToolsBtn: $('showLibraryToolsBtn'),
   libraryToolsPanel: $('libraryToolsPanel'),
   calcTdhBtn: $('calcTdhBtn'),
   exportJsonBtn: $('exportJsonBtn'),
@@ -130,7 +142,7 @@ const els = {
   leadRecommendationBand: $('leadRecommendationBand'),
   formCard: $('formCard'),
 };
-const fieldIds = ['projectName','projectRef','applicationType','flowRate','flowUnit','headValue','headUnit','workflowMode','pumpType','specificGravity','viscosity','fluidPreset','staticHead','pipeLength','pipeDiameter','elevationFt','atmosphericPressure','pipeFactor','fittingsCount','motorServiceFactor','solidsSize','fluidTemp','materialPreference','percentSolidsByWeight','availableMotorHp','motorVoltage','motorFrequency','targetRpm','useVfd','suctionLift','suctionHoseLength','tankSurfacePressure','submergenceDepth','coolingMethod','powerCableLength'];
+const fieldIds = ['projectName','projectRef','applicationType','flowRate','flowUnit','headValue','headUnit','workflowMode','pumpType','specificGravity','viscosity','fluidPreset','staticHead','pipeLength','pipeDiameter','elevationFt','atmosphericPressure','pipeFactor','fittingsCount','motorServiceFactor','solidsSize','fluidTemp','materialPreference','percentSolidsByWeight','availableMotorHp','motorVoltage','motorFrequency','targetRpm','useVfd','suctionLift','suctionHoseLength','tankSurfacePressure','submergenceDepth','coolingMethod','powerCableLength','dredgingDepth','dischargeDistance','dredgingMaterialType'];
 const autoRunFieldSet = new Set(fieldIds);
 const requiredCoreFieldIds = ['flowRate','headValue','specificGravity'];
 
@@ -379,16 +391,18 @@ function syncMirrorFields() {
 function applyWorkflowModeUI() {
   const mode = $('workflowMode').value;
   const modeMap = {
-    electric: ['electricModeFields','quickElectricFields'],
+    electric:    ['electricModeFields','quickElectricFields'],
+    floodedsuc:  ['electricModeFields','quickElectricFields'],
     selfpriming: ['selfPrimingModeFields','quickSelfPrimingFields'],
     submersible: ['submersibleModeFields','quickSubmersibleFields'],
   };
   Object.values(modeMap).flat().forEach(id => $(id)?.classList.add('hidden'));
-  modeMap[mode].forEach(id => $(id)?.classList.remove('hidden'));
+  (modeMap[mode] || modeMap['electric']).forEach(id => $(id)?.classList.remove('hidden'));
   const pumpType = $('pumpType');
   if (pumpType) {
     if (mode === 'selfpriming') pumpType.value = 'selfpriming';
     if (mode === 'submersible') pumpType.value = 'submersible';
+    if (mode === 'floodedsuc') pumpType.value = 'flooded';
     if (mode === 'electric' && pumpType.value === 'selfpriming') pumpType.value = 'flooded';
   }
   syncMirrorFields();
@@ -417,6 +431,15 @@ function getModeConfig(mode) {
       'Assume flooded suction and focus on duty point, slurry properties, and motor loading.',
       'Verify cable, cooling, and submergence constraints separately.',
       'Check solids size and wear material suitability for submerged service.'
+    ]
+  };
+  if (mode === 'floodedsuc') return {
+    title: 'Flooded Suction',
+    checklist: [
+      'Pump centerline is below fluid source — no priming needed.',
+      'Confirm positive suction head is maintained at all operating conditions.',
+      'Check for water hammer risk on discharge side with long pipelines.',
+      'Prefer standard rotor sizes and avoid 5-in pumps.'
     ]
   };
   return {
@@ -450,13 +473,15 @@ function renderLeadRecommendationBand() {
   const ctx = buildContext();
   const generalRecommendation = getGeneralPumpRecommendation(ctx.targetFlowGpm, ctx.modeAdjustedHeadFt);
   const ruleNote = getSizingRuleNote(ctx.targetFlowGpm, ctx.modeAdjustedHeadFt);
+  const preferredModel = recommendedModelForBand(ctx.targetFlowGpm, ctx.modeAdjustedHeadFt);
+  const familyInfo = preferredModel ? PRODUCT_FAMILY_INFO[preferredModel] : null;
   if (!els.leadRecommendationBand) return;
   els.leadRecommendationBand.innerHTML = `
     <div>
       <div class="lead-band-title">Lead recommendation</div>
       <div class="lead-band-pump">${generalRecommendation}</div>
-      <div class="lead-band-copy">${ruleNote}</div>
-      <div class="rule-note">${avoidFiveInPumpNote()}.</div>
+      ${familyInfo ? `<div class="lead-band-family">${familyInfo.family}</div>` : ''}
+      ${familyInfo ? `<div class="lead-band-desc">${familyInfo.desc}</div>` : `<div class="lead-band-copy">${ruleNote}</div>`}
     </div>
     <div class="lead-band-grid">
       <div class="lead-band-tile"><div class="k">Flow</div><div class="v">${ctx.targetFlowGpm.toFixed(0)} gpm</div></div>
@@ -474,6 +499,13 @@ function updateWorkflowGuidance() {
   const mode = getModeConfig(ctx.workflowMode);
   $('workflowGuidance').innerHTML = '<strong>Workflow guidance:</strong><ul>' + notes.map(n => `<li>${n}</li>`).join('') + '</ul>';
   $('modeChecklist').innerHTML = `<strong>${mode.title} checklist:</strong><ul>${mode.checklist.map(n => `<li>${n}</li>`).join('')}</ul>`;
+  // Update admin summary strip
+  const summaryEl = $('adminProjectSummary');
+  if (summaryEl) {
+    const name = $('projectName')?.value || 'Untitled';
+    const ref = $('projectRef')?.value || '';
+    summaryEl.textContent = ref ? `${name} — ${ref}` : name;
+  }
 }
 
 // ── Penalty / adjustment helpers ───────────────────────────────────
@@ -765,11 +797,13 @@ function renderRecommendation() {
     'Recommended material: <strong>316 Stainless Steel</strong> (pH 0–14, corrosion-rated). Not compatible with muriatic acids.' :
     'Standard material suitable for this application.';
 
+  const bestFamilyInfo = PRODUCT_FAMILY_INFO[best.model] || null;
   els.summaryCards.innerHTML = `
     <div class="executive-summary">
       <div class="exec-hero">
-        <div class="exec-eyebrow">Recommended pump</div>
+        <div class="exec-eyebrow">${bestFamilyInfo ? bestFamilyInfo.family : 'Recommended pump'}</div>
         <div class="exec-title">${best.model}</div>
+        ${bestFamilyInfo ? `<div style="font-size:13px;color:#4338ca;font-weight:600;margin-bottom:4px">${bestFamilyInfo.desc}</div>` : ''}
         <p class="exec-sub">Lead screen: <strong>${r.generalRecommendation}</strong>. Curve fit: <strong>${best.model}</strong> — operating at ~${best.dutyFlowGpm.toFixed(0)} gpm / ${best.dutyHeadFt.toFixed(1)} ft.</p>
         <div class="result-actions" style="margin-top:14px">
           <button type="button" class="primary" id="inlineExportHtmlBtn">Export datasheet</button>
@@ -968,8 +1002,7 @@ function renderLibrary() {
   const models = uniqueModels(curveRows).length;
   const sources = [...new Set(curveRows.map(r => r.source))].join(', ');
   els.libraryStats.textContent = `${curveRows.length} curve points loaded across ${models} models. Sources: ${sources}.`;
-  const banner = document.querySelector('.default-library-banner strong');
-  if (banner) banner.textContent = sources.includes('default-library') ? 'Default Eddy curve library active' : 'Custom curve library active';
+  // (library banner removed — always uses default or uploaded library)
   const preview = curveRows.slice(0, 16).map(r => `<tr><td>${r.model}</td><td>${r.source}</td><td>${r.rotor}</td><td>${r.flowGpm}</td><td>${r.headFt}</td><td>${r.efficiencyPct}</td><td>${r.powerHp}</td></tr>`).join('');
   els.curveTableWrap.innerHTML = `<div class="table-scroll-wrap"><table class="table"><thead><tr><th>Model</th><th>Source</th><th>Rotor</th><th>Flow gpm</th><th>Head ft</th><th>Eff %</th><th>Power HP</th></tr></thead><tbody>${preview}</tbody></table></div>`;
 }
@@ -1057,7 +1090,6 @@ els.useDefaultLibraryBtn.addEventListener('click', () => {
   recommend();
   updateAutoRunStatus();
 });
-els.showLibraryToolsBtn.addEventListener('click', () => { if (els.libraryToolsPanel) els.libraryToolsPanel.open = true; els.libraryToolsPanel?.scrollIntoView({ behavior: 'smooth', block: 'start' }); });
 els.calcTdhBtn.addEventListener('click', () => { calcTdh(); queueAutoRecommend('TDH calculated'); });
 $('calcProductionBtn')?.addEventListener('click', calcProductionRate);
 $('fluidPreset')?.addEventListener('change', e => {
@@ -1091,11 +1123,42 @@ els.projectFile.addEventListener('change', e => { const file = e.target.files[0]
 els.printBtn.addEventListener('click', () => window.print());
 els.familyFilter.addEventListener('change', () => recommend());
 $('workflowMode').addEventListener('change', () => { applyWorkflowModeUI(); updateWorkflowGuidance(); validateCoreInputs(); queueAutoRecommend('workflow mode change'); });
-// Auto-open slurry panel for dredging applications
+// Application type auto-configuration
 const appTypeEl = $('applicationType');
+function applyApplicationTypeDefaults(appType) {
+  const slurryPanel = $('slurryPanel');
+  const dredgingFields = $('quickDredgingFields');
+  // Show/hide dredging-specific fields
+  if (dredgingFields) dredgingFields.classList.toggle('hidden', appType !== 'Dredging');
+  if (appType === 'Dredging') {
+    // Auto-open slurry panel
+    if (slurryPanel) slurryPanel.open = true;
+    // Auto-set fluid preset to sand_seawater
+    const presetEl = $('fluidPreset');
+    if (presetEl && presetEl.value === 'custom') {
+      presetEl.value = 'sand_seawater';
+      const preset = fluidPresets['sand_seawater'];
+      $('specificGravity').value = preset.sg;
+      $('viscosity').value = preset.viscosity;
+      $('fluidTemp').value = preset.temp;
+      const spMirror = $('viscositySelfPrimeMirror');
+      const subMirror = $('viscositySubMirror');
+      if (spMirror) spMirror.value = preset.viscosity;
+      if (subMirror) subMirror.value = preset.viscosity;
+    }
+  } else if (appType === 'Dewatering') {
+    // Auto-set workflow to submersible if not already set
+    const modeEl = $('workflowMode');
+    if (modeEl && modeEl.value === 'electric') {
+      modeEl.value = 'submersible';
+      applyWorkflowModeUI();
+    }
+  }
+}
 if (appTypeEl) appTypeEl.addEventListener('change', () => {
-  const panel = $('slurryPanel');
-  if (panel && appTypeEl.value === 'Dredging') panel.open = true;
+  applyApplicationTypeDefaults(appTypeEl.value);
+  updateWorkflowGuidance();
+  validateCoreInputs();
   queueAutoRecommend('application type');
 });
 $('elevationFt').addEventListener('input', () => { updateAtmosphericPressureFromElevation(); queueAutoRecommend('elevation update'); });

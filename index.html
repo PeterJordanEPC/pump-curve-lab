@@ -32,15 +32,21 @@
       </div>
 
       <form id="appForm">
-        <div class="form-section">
-          <div class="grid two top-core-grid">
+        <details class="admin-fields-row" id="adminFieldsPanel" open>
+          <summary>📁 Project: <span id="adminProjectSummary" class="admin-summary-text">Pump Curve Review — Internal Test</span></summary>
+          <div class="grid two admin-grid">
             <label>Project Name
               <input type="text" id="projectName" value="Pump Curve Review" placeholder="Customer or project name" />
             </label>
             <label>Customer Ref
               <input type="text" id="projectRef" value="Internal Test" placeholder="Quote, job, or internal ref" />
             </label>
-            <label>Application Type
+          </div>
+        </details>
+
+        <div class="form-section primary-inputs-section">
+          <div class="grid two primary-core-grid">
+            <label class="primary-field">Application Type
               <select id="applicationType">
                 <option value="Pumping">Pumping</option>
                 <option value="Dredging">Dredging</option>
@@ -48,14 +54,15 @@
                 <option value="Process">Process</option>
               </select>
             </label>
-            <label>Workflow Mode
+            <label class="primary-field">Workflow Mode
               <select id="workflowMode">
                 <option value="electric">Electric Process</option>
                 <option value="selfpriming">Self-Priming</option>
                 <option value="submersible">Submersible</option>
+                <option value="floodedsuc">Flooded Suction</option>
               </select>
             </label>
-            <label>Flow Rate
+            <label class="primary-field">Flow Rate
               <input type="number" id="flowRate" value="2200" step="any" min="0" />
             </label>
             <label>Flow Unit
@@ -65,7 +72,7 @@
                 <option value="lps">L/s</option>
               </select>
             </label>
-            <label>Head <span class="hint">(or use TDH calculator below)</span>
+            <label class="primary-field">Head <span class="hint">(or use TDH calculator below)</span>
               <input type="number" id="headValue" value="30" step="any" min="0" placeholder="Leave blank to calculate" />
             </label>
             <label>Head Unit
@@ -115,6 +122,26 @@
                 <input type="number" id="powerCableLength" value="50" step="any" min="0" />
               </label>
             </div>
+            <div id="quickDredgingFields" class="quick-mode-group hidden">
+              <div class="dredging-fields-label">Dredging parameters</div>
+              <div class="grid three" style="margin-top:8px">
+                <label>Dredging Depth (ft)
+                  <input type="number" id="dredgingDepth" value="20" step="any" min="0" />
+                </label>
+                <label>Discharge Distance (ft)
+                  <input type="number" id="dischargeDistance" value="500" step="any" min="0" />
+                </label>
+                <label>Material Type
+                  <select id="dredgingMaterialType">
+                    <option value="sand">Sand</option>
+                    <option value="silt">Silt / Mud</option>
+                    <option value="gravel">Gravel / Rock</option>
+                    <option value="clay">Clay</option>
+                    <option value="coral">Coral</option>
+                  </select>
+                </label>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -140,7 +167,7 @@
           </div>
         </details>
 
-        <div id="workflowGuidance" class="notice"></div>
+
 
         <details class="advanced-panel" id="tdhCalcPanel">
           <summary>📐 TDH Calculator — Don't know your head? Calculate it here</summary>
@@ -280,13 +307,6 @@
           </div>
         </details>
 
-        <div class="card-lite default-library-banner">
-          <div>
-            <strong>Default Eddy curve library active</strong>
-            <p class="muted">CSV upload, filtering, save/load, export, and print tools are still available.</p>
-          </div>
-          <button type="button" id="showLibraryToolsBtn">Advanced library tools</button>
-        </div>
 
         <details class="advanced-panel" id="libraryToolsPanel">
           <summary>Advanced library tools</summary>
@@ -306,13 +326,21 @@
           </div>
         </details>
 
-        <div id="modeChecklist" class="notice subtle-notice"></div>
+        <details class="advanced-panel" id="workflowPanel">
+          <summary>📋 Workflow guidance &amp; mode checklist</summary>
+          <div class="inside-panel">
+            <div id="workflowGuidance"></div>
+            <div id="modeChecklist" style="margin-top:10px"></div>
+          </div>
+        </details>
 
-        <div class="actions primary-actions sticky-actions" id="stickyActions">
-          <button type="submit">Recommend pump</button>
-          <button type="button" id="exportHtmlBtn">Export HTML report</button>
-          <button type="button" id="exportCsvBtn">Export CSV</button>
-          <button type="button" id="exportJsonBtn">Export JSON</button>
+        <div class="sticky-actions-bar" id="stickyActions">
+          <button type="submit" class="btn-recommend-main">Recommend pump</button>
+          <div class="export-group">
+            <button type="button" id="exportHtmlBtn" class="btn-export-sm">HTML report</button>
+            <button type="button" id="exportCsvBtn" class="btn-export-sm">CSV</button>
+            <button type="button" id="exportJsonBtn" class="btn-export-sm">JSON</button>
+          </div>
         </div>
       </form>
     </section>
