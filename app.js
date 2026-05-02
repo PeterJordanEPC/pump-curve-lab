@@ -139,7 +139,6 @@ const els = {
   appForm: $('appForm'),
   familyFilter: $('familyFilter'),
   validationSummary: $('validationSummary'),
-  leadRecommendationBand: $('leadRecommendationBand'),
   formCard: $('formCard'),
 };
 const fieldIds = ['projectName','projectRef','applicationType','flowRate','flowUnit','headValue','headUnit','workflowMode','pumpType','specificGravity','viscosity','fluidPreset','staticHead','pipeLength','pipeDiameter','elevationFt','atmosphericPressure','pipeFactor','fittingsCount','motorServiceFactor','solidsSize','fluidTemp','materialPreference','percentSolidsByWeight','availableMotorHp','motorVoltage','motorFrequency','targetRpm','useVfd','suctionLift','suctionHoseLength','tankSurfacePressure','submergenceDepth','coolingMethod','powerCableLength','dredgingDepth','dischargeDistance','dredgingMaterialType'];
@@ -487,32 +486,10 @@ function getWorkflowGuidance(ctx) {
   return notes;
 }
 
-function renderLeadRecommendationBand() {
-  const ctx = buildContext();
-  const generalRecommendation = getGeneralPumpRecommendation(ctx.targetFlowGpm, ctx.modeAdjustedHeadFt);
-  const ruleNote = getSizingRuleNote(ctx.targetFlowGpm, ctx.modeAdjustedHeadFt);
-  const preferredModel = recommendedModelForBand(ctx.targetFlowGpm, ctx.modeAdjustedHeadFt);
-  const familyInfo = preferredModel ? PRODUCT_FAMILY_INFO[preferredModel] : null;
-  if (!els.leadRecommendationBand) return;
-  els.leadRecommendationBand.innerHTML = `
-    <div>
-      <div class="lead-band-title">Lead recommendation</div>
-      <div class="lead-band-pump">${generalRecommendation}</div>
-      ${familyInfo ? `<div class="lead-band-family">${familyInfo.family}</div>` : ''}
-      ${familyInfo ? `<div class="lead-band-desc">${familyInfo.desc}</div>` : `<div class="lead-band-copy">${ruleNote}</div>`}
-    </div>
-    <div class="lead-band-grid">
-      <div class="lead-band-tile"><div class="k">Flow</div><div class="v">${ctx.targetFlowGpm.toFixed(0)} gpm</div></div>
-      <div class="lead-band-tile"><div class="k">Adj. head</div><div class="v">${ctx.modeAdjustedHeadFt.toFixed(1)} ft</div></div>
-      <div class="lead-band-tile"><div class="k">Workflow</div><div class="v">${getModeConfig(ctx.workflowMode).title}</div></div>
-      <div class="lead-band-tile"><div class="k">Sp. gravity</div><div class="v">${ctx.sg.toFixed(2)}</div></div>
-    </div>`;
-}
 
 function updateWorkflowGuidance() {
   const ctx = buildContext();
   applyWorkflowModeUI();
-  renderLeadRecommendationBand();
   const notes = getWorkflowGuidance(ctx);
   const mode = getModeConfig(ctx.workflowMode);
   $('workflowGuidance').innerHTML = '<strong>Workflow guidance:</strong><ul>' + notes.map(n => `<li>${n}</li>`).join('') + '</ul>';
