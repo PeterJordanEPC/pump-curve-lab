@@ -285,6 +285,26 @@ function validateCoreInputs() {
   return errors;
 }
 
+// ── Pump affinity laws ─────────────────────────────────────────────
+// Q2 = Q1 × (N2/N1)       — flow scales linearly with speed
+// H2 = H1 × (N2/N1)²      — head scales with square of speed
+// P2 = P1 × (N2/N1)³      — power scales with cube of speed
+// Efficiency is assumed constant across speed changes.
+const BASE_RPM = 1800;
+
+function applyAffinityLaws(rows, targetRpm) {
+  if (!targetRpm || targetRpm === BASE_RPM) return rows;
+  const ratio = targetRpm / BASE_RPM;
+  return rows.map(r => ({
+    ...r,
+    flowGpm: r.flowGpm * ratio,
+    headFt: r.headFt * Math.pow(ratio, 2),
+    powerHp: r.powerHp * Math.pow(ratio, 3),
+    // Efficiency stays approximately constant per affinity laws
+    efficiencyPct: r.efficiencyPct,
+  }));
+}
+
 // ── Curve math ─────────────────────────────────────────────────────
 
 function interpolateCurvePoint(points, flow) {
@@ -361,7 +381,6 @@ function getSizingRuleNote(flowGpm, adjustedHeadFt) {
   return 'Based on EDDY Pump lead-screening flow bands.';
 }
 
-function avoidFiveInPumpNote() { return 'Avoid 5-in pump when making suggestions'; }
 
 /** Map general recommendation text → preferred model name */
 function recommendedModelForBand(flowGpm, adjustedHeadFt) {
@@ -439,7 +458,7 @@ function getModeConfig(mode) {
       'Pump centerline is below fluid source — no priming needed.',
       'Confirm positive suction head is maintained at all operating conditions.',
       'Check for water hammer risk on discharge side with long pipelines.',
-      'Prefer standard rotor sizes and avoid 5-in pumps.'
+      'Prefer standard rotor sizes.'
     ]
   };
   return {
@@ -447,7 +466,7 @@ function getModeConfig(mode) {
     checklist: [
       'Start with customer flow, TDH, slurry properties, and operating frequency/RPM.',
       'Use interpolated family match as a screening step, then manually validate motor sizing.',
-      'Prefer standard rotor sizes and avoid 5-in pumps.'
+      'Prefer standard rotor sizes.'
     ]
   };
 }
@@ -461,7 +480,6 @@ function getWorkflowGuidance(ctx) {
     notes.push('Electric / flooded workflow: start from customer flow, TDH, slurry, then interpolate the family curve and validate motor sizing.');
   }
   if (ctx.targetFlowGpm >= 50 && ctx.targetFlowGpm < 200 && ctx.adjustedHeadFt > 120) notes.push('High-head exception: 50–200 GPM with head > 120 ft → prefer HH2000.');
-  notes.push('Avoid 5-in pump recommendations unless there is a very strong override reason.');
   notes.push('Largest rotor principle: Select the largest diameter rotor that fits the pump casing for available HP — larger rotors at lower speed last longer in abrasive service.');
   notes.push('Use job/engineering judgment on motor sizing — manual override may be needed after VFD/RPM review.');
   if (ctx.materialPreference === 'abrasive') notes.push('Abrasive slurry: a faster small-rotor pump wears far faster than a slower large-rotor pump.');
@@ -723,7 +741,10 @@ function recommend(e) {
 
   const ctx = buildContext();
   const grouped = uniqueModels(rows).map(model => {
-    const familyRows = rows.filter(r => r.model === model).sort((a,b) => a.flowGpm - b.flowGpm);
+    const rawFamilyRows = rows.filter(r => r.model === model).sort((a,b) => a.flowGpm - b.flowGpm);
+    // Apply pump affinity laws if operating at non-base RPM with VFD
+    const useAffinity = ctx.workflowMode === 'electric' && ctx.useVfd === 'yes' && ctx.targetRpm && ctx.targetRpm !== BASE_RPM;
+    const familyRows = useAffinity ? applyAffinityLaws(rawFamilyRows, ctx.targetRpm) : rawFamilyRows;
     const interpolatedDuty = interpolateCurvePoint(familyRows, ctx.targetFlowGpm);
     if (!interpolatedDuty) return null;
     const maxFlow = Math.max(...familyRows.map(r => r.flowGpm), ctx.targetFlowGpm) * 1.15;
@@ -739,7 +760,6 @@ function recommend(e) {
     libraryCount: rows.length,
     modelCount: uniqueModels(rows).length,
     generalRecommendation: getGeneralPumpRecommendation(ctx.targetFlowGpm, ctx.modeAdjustedHeadFt),
-    avoidFiveInPump: avoidFiveInPumpNote(),
     workflowNotes: getWorkflowGuidance(ctx),
     modeWarnings: getModeWarnings(ctx, best),
   };
@@ -840,7 +860,7 @@ function renderRecommendation() {
         <strong>Why this pump:</strong> Best balance of size-band match, curve intersection, BEP proximity, and workflow rules.
       </div>
       ${warnings.length ? `<div class="notice"><strong>Key warnings</strong><ul class="warning-list">${warnings.map(n => `<li>${n}</li>`).join('')}</ul></div>` : ''}
-      <div class="result-note"><strong>Note:</strong> ${r.avoidFiveInPump}. Verify NPSH, solids handling, wear, and manufacturer-approved curve before release.</div>
+      <div class="result-note"><strong>Note:</strong> Verify NPSH, solids handling, wear, and manufacturer-approved curve before release.</div>
       <div class="result-note"><strong>Material:</strong> ${matRec}</div>
       <div class="table-scroll-wrap"><table class="table">
         <thead><tr><th>Pump</th><th>Rotor</th><th>Op Flow</th><th>Op Head</th><th>Eff</th><th>Motor HP</th><th>Score</th></tr></thead>
